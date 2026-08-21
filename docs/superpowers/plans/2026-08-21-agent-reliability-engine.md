@@ -122,7 +122,7 @@ backend/
   - `get_async_session()` async generator in `app.database`
   - FastAPI app instance in `app.main`
 
-- [ ] **Step 1: Create project config and dependencies**
+- [x] **Step 1: Create project config and dependencies**
 
 Create `backend/pyproject.toml`:
 ```toml
@@ -155,12 +155,12 @@ pytest==8.3.0
 pytest-asyncio==0.25.0
 ```
 
-- [ ] **Step 2: Install dependencies**
+- [x] **Step 2: Install dependencies**
 
 Run: `cd backend && pip install -r requirements.txt`
 Expected: all packages install successfully
 
-- [ ] **Step 3: Write the failing tests for enums and OWASP mapping**
+- [x] **Step 3: Write the failing tests for enums and OWASP mapping**
 
 Create `backend/tests/__init__.py` (empty).
 
@@ -304,12 +304,12 @@ class TestOwaspMapping:
                 assert result.startswith("LLM")
 ```
 
-- [ ] **Step 4: Run tests to verify they fail**
+- [x] **Step 4: Run tests to verify they fail**
 
 Run: `cd backend && python -m pytest tests/test_schemas.py tests/test_owasp_mapping.py -v`
 Expected: FAIL — modules not found (app.schemas.*, app.core.owasp_mapping do not exist yet)
 
-- [ ] **Step 5: Implement enums and Pydantic schemas**
+- [x] **Step 5: Implement enums and Pydantic schemas**
 
 Create `backend/app/__init__.py` (empty).
 Create `backend/app/models/__init__.py` (empty).
@@ -519,12 +519,12 @@ def get_owasp_mapping(category: FailureCategory) -> str | None:
     return _OWASP_MAP.get(category)
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/test_schemas.py tests/test_owasp_mapping.py -v`
 Expected: ALL PASS
 
-- [ ] **Step 7: Implement SQLAlchemy models and database setup**
+- [x] **Step 7: Implement SQLAlchemy models and database setup**
 
 Create `backend/app/config.py`:
 ```python
@@ -681,7 +681,7 @@ async def health_check():
     return {"status": "ok"}
 ```
 
-- [ ] **Step 8: Write and run DB model test**
+- [x] **Step 8: Write and run DB model test**
 
 Create `backend/tests/conftest.py`:
 ```python
@@ -759,12 +759,12 @@ class TestRunRelationships:
         assert run_id_col.unique is True
 ```
 
-- [ ] **Step 9: Run all tests to verify they pass**
+- [x] **Step 9: Run all tests to verify they pass**
 
 Run: `cd backend && python -m pytest tests/ -v`
 Expected: ALL PASS
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add backend/
@@ -789,7 +789,7 @@ git commit -m "feat: project skeleton with DB models, Pydantic schemas, OWASP ma
   - `create_devops_agent(system_prompt: str, mock_responses: dict | None) -> CompiledGraph` — creates a LangGraph agent with the given prompt and optional mocked tool responses
   - `HIGH_RISK_TOOLS: set[str]` — `{"restart_service", "delete_deployment", "send_alert"}`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/app/agents/__init__.py` (empty).
 
@@ -873,12 +873,12 @@ class TestCreateAgent:
         assert agent is not None
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && python -m pytest tests/test_devops_agent.py -v`
 Expected: FAIL — module `app.agents.devops_agent` not found
 
-- [ ] **Step 3: Implement the agent**
+- [x] **Step 3: Implement the agent**
 
 Create `backend/app/agents/agent_versions.py`:
 ```python
@@ -1048,12 +1048,12 @@ def create_devops_agent(
     return graph.compile()
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && python -m pytest tests/test_devops_agent.py -v`
 Expected: ALL PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/agents/
@@ -1078,7 +1078,7 @@ git commit -m "feat: DevOps Assistant agent with 5 tools, 3 versions, mock layer
 - Produces:
   - `check_guardrails(trace: list[dict], high_risk_tools: set[str]) -> list[GuardrailResultCreate]` — analyzes a trace and returns guardrail results for every high-risk tool call found
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/app/modules/__init__.py` (empty).
 
@@ -1188,12 +1188,12 @@ class TestGuardrailDeterminism:
         assert r1[0].confirmation_type == r2[0].confirmation_type
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && python -m pytest tests/test_guardrail_tester.py -v`
 Expected: FAIL — module `app.modules.guardrail_tester` not found
 
-- [ ] **Step 3: Implement the guardrail tester**
+- [x] **Step 3: Implement the guardrail tester**
 
 Create `backend/app/modules/guardrail_tester.py`:
 ```python
@@ -1297,12 +1297,12 @@ def check_guardrails(
     return results
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && python -m pytest tests/test_guardrail_tester.py -v`
 Expected: ALL PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/modules/guardrail_tester.py backend/tests/test_guardrail_tester.py
@@ -1329,7 +1329,7 @@ git commit -m "feat: rule-based guardrail tester with prompt and tool confirmati
   - `generate_scenarios(system_prompt: str, tool_definitions: list[dict], num_scenarios: int = 20) -> list[ScenarioCreate]` — async, calls Gemini Flash, returns validated scenarios
   - `CATEGORY_PROMPTS: dict[FailureCategory, str]` — prompt templates per category
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `backend/tests/test_scenario_generator.py`:
 ```python
@@ -1384,12 +1384,12 @@ class TestCategoryPrompts:
             assert len(prompt) > 50, f"Prompt for {cat} is suspiciously short"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd backend && python -m pytest tests/test_scenario_generator.py -v`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Implement scenario generator**
+- [x] **Step 3: Implement scenario generator**
 
 Create `backend/app/modules/scenario_generator.py`:
 ```python
@@ -1553,12 +1553,12 @@ Return ONLY the JSON array, no markdown fences, no explanation."""
     return scenarios
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && python -m pytest tests/test_scenario_generator.py -v`
 Expected: ALL PASS (the sync tests for parse_tool_schemas and CATEGORY_PROMPTS pass; the async generate_scenarios is tested in integration)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/app/modules/scenario_generator.py backend/tests/test_scenario_generator.py
