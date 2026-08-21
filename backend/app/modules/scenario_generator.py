@@ -16,11 +16,19 @@ class ScenarioGenerator:
 
     def __init__(self, model_name: str = settings.gemini_flash_model):
         self.model_name = model_name
-        self.llm = ChatGoogleGenerativeAI(
-            model=self.model_name,
-            google_api_key=settings.gemini_api_key,
-            temperature=0.7,
-        )
+        self._llm: ChatGoogleGenerativeAI | None = None
+
+    @property
+    def llm(self) -> ChatGoogleGenerativeAI:
+        """Lazily initialise the LLM on first access so the object can be
+        constructed safely in tests without a real API key present."""
+        if self._llm is None:
+            self._llm = ChatGoogleGenerativeAI(
+                model=self.model_name,
+                google_api_key=settings.gemini_api_key,
+                temperature=0.7,
+            )
+        return self._llm
 
     def _build_prompt(self, category: FailureCategory, count: int) -> str:
         """Construct the prompt based on the failure category."""
