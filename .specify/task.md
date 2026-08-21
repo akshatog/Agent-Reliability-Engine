@@ -6,25 +6,25 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 1: Foundation
 
-- [ ] **1.1** FastAPI app skeleton (`backend/app/main.py`, routers, CORS, health check)
-- [ ] **1.2** PostgreSQL connection (SQLAlchemy async + asyncpg)
-- [ ] **1.3** DB models (SQLAlchemy ORM: agent_versions, scenarios, runs, classifications, guardrail_results)
-- [ ] **1.4** Pydantic schemas (request/response models for all entities)
-- [ ] **1.5** Alembic setup + initial migration
-- [ ] **1.6** WebSocket endpoint stub (`/ws/traces`)
-- [ ] **1.7** DevOps Assistant Agent (LangGraph) — 5 tools, configurable system_prompt
-- [ ] **1.8** Seed 3 agent versions (v1 weak, v2 strong, v3 regressed) with system prompts + tool schemas
-- [ ] **1.9** Verify: health check returns 200, DB connection works, agent executes a basic prompt
+- [x] **1.1** FastAPI app skeleton (`backend/app/main.py`, routers, CORS, health check)
+- [x] **1.2** PostgreSQL connection (SQLAlchemy async + asyncpg)
+- [x] **1.3** DB models (SQLAlchemy ORM: agent_versions, scenarios, runs, classifications, guardrail_results)
+- [x] **1.4** Pydantic schemas (request/response models for all entities)
+- [x] **1.5** Alembic setup + initial migration
+- [x] **1.6** WebSocket endpoint stub (`/ws/traces`)
+- [x] **1.7** DevOps Assistant Agent (LangGraph) — 5 tools, configurable system_prompt
+- [x] **1.8** Seed 3 agent versions (v1 weak, v2 strong, v3 regressed) with system prompts + tool schemas
+- [x] **1.9** Verify: health check returns 200, DB connection works, agent executes a basic prompt
 
 ## Phase 2: Scenario Generation (Module 1)
 
-- [ ] **2.1** Tool schema parser — extract tool names, descriptions, params, flag high-risk tools
-- [ ] **2.2** 7 category-based prompt templates (loop, confidence, destructive, goal-drift, prompt-injection, wrong-tool, premature-completion)
-- [ ] **2.3** Gemini Flash integration — structured output call with response schema
-- [ ] **2.4** Scenario generation service — orchestrates: parse tools → generate per category → validate → store
-- [ ] **2.5** `POST /api/scenarios/generate` endpoint
-- [ ] **2.6** Test: given DevOps agent tools, generates ≥15 scenarios with ≥2 per category, ≥40% multi-step
-- [ ] **2.7** Test: at least one destructive-action-bait scenario names `delete_deployment` specifically
+- [x] **2.1** Tool schema parser — extract tool names, descriptions, params, flag high-risk tools
+- [x] **2.2** 7 category-based prompt templates (loop, confidence, destructive, goal-drift, prompt-injection, wrong-tool, premature-completion)
+- [x] **2.3** Gemini Flash integration — structured output call with response schema
+- [x] **2.4** Scenario generation service — orchestrates: parse tools → generate per category → validate → store
+- [x] **2.5** `POST /api/scenarios/generate` endpoint
+- [x] **2.6** Test: given DevOps agent tools, generates ≥15 scenarios with ≥2 per category, ≥40% multi-step
+- [x] **2.7** Test: at least one destructive-action-bait scenario names `delete_deployment` specifically
 
 ## Phase 3: Sandbox Execution (Module 2)
 
@@ -39,12 +39,12 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 4: Guardrail Tester (Module 4)
 
-- [ ] **4.1** Guardrail checker — pattern A (prompt-based confirmation detection) + pattern B (tool-based)
-- [ ] **4.2** `POST /api/guardrail/check` endpoint
-- [ ] **4.3** Auto-trigger after run completion
-- [ ] **4.4** Test: trace with `delete_deployment` called without confirmation → `guardrail_bypassed`
-- [ ] **4.5** Test: trace with confirmation question before `delete_deployment` → `guardrail_held`
-- [ ] **4.6** Test: determinism — identical traces produce identical results 100% of the time
+- [x] **4.1** Guardrail checker — pattern A (prompt-based confirmation detection) + pattern B (tool-based)
+- [x] **4.2** `POST /api/guardrail/check` endpoint
+- [x] **4.3** Auto-trigger after run completion
+- [x] **4.4** Test: trace with `delete_deployment` called without confirmation → `guardrail_bypassed`
+- [x] **4.5** Test: trace with confirmation question before `delete_deployment` → `guardrail_held`
+- [x] **4.6** Test: determinism — identical traces produce identical results 100% of the time
 
 ## Phase 5: Failure Classifier (Module 3)
 
@@ -105,13 +105,13 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 | Phase | Status | Tasks |
 |---|---|---|
-| Foundation | Not started | 0/9 |
-| Module 1 (Scenario Gen) | Not started | 0/7 |
+| Foundation | Done | 9/9 |
+| Module 1 (Scenario Gen) | Done | 7/7 |
 | Module 2 (Sandbox) | Not started | 0/8 |
-| Module 4 (Guardrail) | Not started | 0/6 |
+| Module 4 (Guardrail) | Done | 6/6 |
 | Module 3 (Classifier) | Not started | 0/8 |
 | Module 5 (Scorecard) | Not started | 0/7 |
 | Dashboard | Not started | 0/12 |
 | Integration + Demo | Not started | 0/6 |
 | Stretch (D6) | Not started | 0/5 |
-| **Total** | | **0/68** |
+| **Total** | | **22/68** |

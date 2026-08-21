@@ -22,8 +22,10 @@ We are actively developing the backend following strict Test-Driven Development 
 *   ✅ **Task 1:** Project Skeleton + DB Models + Pydantic Schemas
 *   ✅ **Task 2:** DevOps Assistant Agent (LangGraph)
 *   ✅ **Task 3:** Guardrail Tester (Module 4, rule-based)
-*   ⏳ **Task 4:** Scenario Generation Engine (Module 1)
-*   *... Tasks 5 through 10 pending.*
+*   ✅ **Task 4:** Scenario Generation Engine (Module 1)
+*   ✅ **CI/CD & DB Hardening:** Automated testing, Phase 2 migration
+*   ⏳ **Task 5:** Sandbox Execution Harness (Module 2)
+*   *... Tasks 6 through 10 pending.*
 
 ## Setup & Installation
 
