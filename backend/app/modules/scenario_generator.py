@@ -12,7 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class ScenarioGenerator:
-    """Generates adversarial scenarios for agent testing using Gemini."""
+    """Generates adversarial test scenarios for AI agent reliability testing using Gemini.
+
+    The LLM client is lazily initialized on first use — the object can be constructed
+    safely in test environments without a real API key present. The `ChatGoogleGenerativeAI`
+    instance is only created on the first call to `generate_scenarios()`, not at `__init__()`
+    time. This avoids side effects during object construction and allows monkeypatching
+    to intercept `llm.ainvoke()` before the LLM is ever initialized.
+    """
 
     def __init__(self, model_name: str = settings.gemini_flash_model):
         self.model_name = model_name

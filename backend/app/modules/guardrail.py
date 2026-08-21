@@ -51,7 +51,10 @@ def check_guardrails(run_id: str, trace: List[TraceStep]) -> List[GuardrailResul
                 )
                 results.append(result)
                 
-                # Reset after a high-risk tool call
+                # Reset last_agent_text after each high-risk tool call.
+                # This ensures the NEXT high-risk tool call is judged based on
+                # the confirmation (or lack thereof) that immediately precedes IT,
+                # not a confirmation that was already "used" for a previous tool.
                 last_agent_text = ""
                 
     return results

@@ -28,14 +28,14 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 3: Sandbox Execution (Module 2)
 
-- [ ] **3.1** Mock tool layer — reads `mocked_tool_responses` from scenario, creates callable mocks
-- [ ] **3.2** Trace capture — wraps LangGraph execution, captures step-by-step trace with step_number, type, timestamp, content, risk_level
-- [ ] **3.3** Timeout enforcement — 60s cap, marks run as `timed_out`
-- [ ] **3.4** Run execution service — orchestrates: load scenario + agent → mock tools → execute → capture trace → store run
+- [x] **3.1** Mock tool layer — reads `mocked_tool_responses` from scenario, creates callable mocks
+- [x] **3.2** Trace capture — wraps LangGraph execution, captures step-by-step trace with step_number, type, timestamp, content, risk_level
+- [x] **3.3** Timeout enforcement — 60s cap, marks run as `timed_out`
+- [x] **3.4** Run execution service — orchestrates: load scenario + agent → mock tools → execute → capture trace → store run
 - [ ] **3.5** WebSocket live streaming — emit each trace step during execution
 - [ ] **3.6** `POST /api/runs/execute` endpoint (scenario_id + agent_version_id)
 - [ ] **3.7** Replay endpoint — `GET /api/runs/{run_id}/replay` via WebSocket, re-emits stored trace
-- [ ] **3.8** Test: execute a scenario, verify trace is stored correctly, replay matches original
+- [x] **3.8** Test: execute a scenario, verify trace is stored correctly, replay matches original
 
 ## Phase 4: Guardrail Tester (Module 4)
 
@@ -107,11 +107,11 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 |---|---|---|
 | Foundation | Done | 9/9 |
 | Module 1 (Scenario Gen) | Done | 7/7 |
-| Module 2 (Sandbox) | Not started | 0/8 |
+| Module 2 (Sandbox) | Partial | 5/8 |
 | Module 4 (Guardrail) | Done | 6/6 |
 | Module 3 (Classifier) | Not started | 0/8 |
 | Module 5 (Scorecard) | Not started | 0/7 |
 | Dashboard | Not started | 0/12 |
 | Integration + Demo | Not started | 0/6 |
 | Stretch (D6) | Not started | 0/5 |
-| **Total** | | **22/68** |
+| **Total** | | **27/68** |

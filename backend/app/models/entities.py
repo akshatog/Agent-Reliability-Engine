@@ -57,8 +57,15 @@ class Run(Base):
 
     agent_version: Mapped["AgentVersion"] = relationship(back_populates="runs")
     scenario: Mapped["Scenario"] = relationship(back_populates="runs")
-    classification: Mapped["Classification | None"] = relationship(back_populates="run", uselist=False)
-    guardrail_results: Mapped[list["GuardrailResult"]] = relationship(back_populates="run")
+    classification: Mapped["Classification | None"] = relationship(
+        back_populates="run",
+        uselist=False,
+        cascade="all, delete-orphan",  # Mirrors Phase 2 DB-level CASCADE DELETE
+    )
+    guardrail_results: Mapped[list["GuardrailResult"]] = relationship(
+        back_populates="run",
+        cascade="all, delete-orphan",  # Mirrors Phase 2 DB-level CASCADE DELETE
+    )
 
 
 class Classification(Base):
