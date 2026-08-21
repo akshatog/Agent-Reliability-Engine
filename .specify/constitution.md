@@ -102,6 +102,7 @@ Two detection patterns for the Destructive Action Guardrail Tester:
 
 - Spec-driven: `constitution.md` → `spec.md` → `plan.md` → `task.md` →
   implementation, in that order. No code before spec sign-off.
+- **HARD AND FAST RULE:** Every time code or functionality is implemented, fixed, or modified, ALL relevant tracking files must be updated immediately in the same step. This includes: `README.md`, `.specify/task.md`, `docs/superpowers/plans/...md`, `.superpowers/sdd/.../progress.md`, and the Artifacts (`task.md`, `walkthrough.md`, `implementation_plan.md`). Do not wait for a reminder.
 - TDD per module: schema first → test → implement → wire API → verify.
 - Every module ships with at least one scripted demo scenario proven to trigger
   a real failure — a module that never fails in testing is not demo-ready.

@@ -1,45 +1,57 @@
-# Agent Reliability Engine
+# Agent Reliability Engine (OOSC 4.0 Hackathon)
 
-**OOSC 4.0 Hackathon — Problem Statement 4: AI Agent Evaluation and Reliability Engine**
+![Reliability Engine](https://img.shields.io/badge/Status-In%20Development-yellow)
+![Superpowers Framework](https://img.shields.io/badge/Workflow-Superpowers%20SDD%2FTDD-blue)
 
-Continuous integration for autonomous agents — automatically generates adversarial
-test scenarios, runs a target agent in a sandbox, classifies failure modes, and
-produces a reliability report with a before/after comparison view.
+A CI/CD engine for autonomous agents. This system automatically generates adversarial scenarios, tests AI agents in a sandboxed environment, and evaluates their failure modes (e.g., prompt injection, destructive actions, tool call loops) using a combination of deterministic guardrails and LLM-as-a-judge.
 
-## Spec-driven workflow
+Built for the **OOSC 4.0 Hackathon (Problem Statement 4)** at IIIT Allahabad.
 
-This project follows spec-driven development. Read in this order:
+## Project Structure
 
-1. [`.specify/constitution.md`](.specify/constitution.md) — locked architecture & scope decisions
-2. [`.specify/spec.md`](.specify/spec.md) — functional spec for all 5 modules
-3. [`.specify/plan.md`](.specify/plan.md) — implementation plan (fill in via Antigravity/Superpowers)
+This project follows a strict backend/frontend split:
 
-**Do not write code before the constitution and spec are read.** Any deviation from
-the constitution needs an explicit amendment logged there first.
+*   **`backend/`**: FastAPI application, PostgreSQL database (via SQLAlchemy async), and LangChain/LangGraph agent definitions.
+*   **`frontend/`**: (Coming Soon) Next.js React dashboard for viewing metrics and run traces.
+*   **`.specify/` & `docs/superpowers/`**: Superpowers framework planning, specs, and ledger artifacts.
 
-## Stack
+## Current Progress
 
-- Backend: Python + FastAPI + LangGraph
-- Frontend: Next.js (App Router) + TailwindCSS
-- DB: PostgreSQL
-- Realtime: WebSocket (trace streaming)
+We are actively developing the backend following strict Test-Driven Development (TDD). You can track progress in `.specify/task.md` or `.superpowers/sdd/2026-08-21-agent-reliability-engine/progress.md`.
 
-## Structure
+*   ✅ **Task 1:** Project Skeleton + DB Models + Pydantic Schemas
+*   ✅ **Task 2:** DevOps Assistant Agent (LangGraph)
+*   ✅ **Task 3:** Guardrail Tester (Module 4, rule-based)
+*   ✅ **Task 4:** Scenario Generation Engine (Module 1)
+*   ✅ **CI/CD & DB Hardening:** Automated testing, Phase 2 migration
+*   ⏳ **Task 5:** Sandbox Execution Harness (Module 2)
+*   *... Tasks 6 through 10 pending.*
 
-```
-agent-reliability-engine/
-├── .specify/           # constitution, spec, plan — read these first
-├── backend/
-│   └── app/
-│       ├── agents/     # target demo agent(s) - LangGraph
-│       ├── modules/    # scenario_gen, harness, classifier, guardrail, comparison
-│       ├── models/     # Pydantic schemas + DB models
-│       └── api/        # FastAPI routes + WebSocket
-└── frontend/
-    ├── app/             # Next.js routes
-    └── components/      # trace viewer, scenario list, classifier table, comparison view
-```
+## Setup & Installation
 
-## Status
+### Prerequisites
+*   Python 3.11+
+*   PostgreSQL database (e.g., Neon.tech)
+*   Google Gemini API Key
 
-Spec locked. Implementation not started — next step: `plan.md` build-out in Antigravity.
+### Backend Setup
+1.  Navigate to the backend directory:
+    ```bash
+    cd backend
+    ```
+2.  Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  Configure environment variables:
+    *   Copy `.env.example` to `.env`
+    *   Add your `DATABASE_URL` (ensure it starts with `postgresql+asyncpg://`)
+    *   Add your `GEMINI_API_KEY`
+4.  Run database migrations:
+    ```bash
+    alembic upgrade head
+    ```
+5.  Run the test suite to verify everything works:
+    ```bash
+    python -m pytest tests/ -v
+    ```
