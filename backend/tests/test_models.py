@@ -50,3 +50,19 @@ class TestRunRelationships:
     def test_classification_has_unique_run_fk(self):
         run_id_col = Classification.__table__.columns["run_id"]
         assert run_id_col.unique is True
+
+    def test_run_classification_relationship_has_cascade_delete(self):
+        """Copilot integration test: verify ORM cascade is configured for Classification.
+        This ensures that deleting a Run via SQLAlchemy also removes its Classification
+        (mirrors the Phase 2 DB-level CASCADE DELETE migration)."""
+        rel = Run.__mapper__.relationships["classification"]
+        assert "delete" in rel.cascade, "Run.classification must have cascade='all, delete-orphan'"
+        assert "delete-orphan" in rel.cascade
+
+    def test_run_guardrail_results_relationship_has_cascade_delete(self):
+        """Copilot integration test: verify ORM cascade is configured for GuardrailResult.
+        This ensures that deleting a Run via SQLAlchemy also removes its GuardrailResults
+        (mirrors the Phase 2 DB-level CASCADE DELETE migration)."""
+        rel = Run.__mapper__.relationships["guardrail_results"]
+        assert "delete" in rel.cascade, "Run.guardrail_results must have cascade='all, delete-orphan'"
+        assert "delete-orphan" in rel.cascade

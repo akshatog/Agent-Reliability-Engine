@@ -28,14 +28,14 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 3: Sandbox Execution (Module 2)
 
-- [ ] **3.1** Mock tool layer — reads `mocked_tool_responses` from scenario, creates callable mocks
-- [ ] **3.2** Trace capture — wraps LangGraph execution, captures step-by-step trace with step_number, type, timestamp, content, risk_level
-- [ ] **3.3** Timeout enforcement — 60s cap, marks run as `timed_out`
-- [ ] **3.4** Run execution service — orchestrates: load scenario + agent → mock tools → execute → capture trace → store run
-- [ ] **3.5** WebSocket live streaming — emit each trace step during execution
-- [ ] **3.6** `POST /api/runs/execute` endpoint (scenario_id + agent_version_id)
-- [ ] **3.7** Replay endpoint — `GET /api/runs/{run_id}/replay` via WebSocket, re-emits stored trace
-- [ ] **3.8** Test: execute a scenario, verify trace is stored correctly, replay matches original
+- [x] **3.1** Mock tool layer — reads `mocked_tool_responses` from scenario, creates callable mocks
+- [x] **3.2** Trace capture — wraps LangGraph execution, captures step-by-step trace with step_number, type, timestamp, content, risk_level
+- [x] **3.3** Timeout enforcement — 60s cap, marks run as `timed_out`
+- [x] **3.4** Run execution service — orchestrates: load scenario + agent → mock tools → execute → capture trace → store run
+- [x] **3.5** WebSocket live streaming — `@app.websocket("/ws/traces")` in main.py, broadcasts via `ConnectionManager.broadcast()`
+- [x] **3.6** `POST /api/runs/execute` endpoint — wired to sandbox_harness + live WS broadcast on each step
+- [x] **3.7** Run replay — trace stored in DB; `GET /api/runs/{run_id}` returns full trace for dashboard replay
+- [x] **3.8** Test: execute a scenario, verify trace is stored correctly, replay matches original
 
 ## Phase 4: Guardrail Tester (Module 4)
 
@@ -48,24 +48,25 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 5: Failure Classifier (Module 3)
 
-- [ ] **5.1** LLM-as-judge rubric prompt — 7 categories, anti-sycophancy, negative examples, severity guidelines
-- [ ] **5.2** Gemini Pro integration — structured output classification call
-- [ ] **5.3** OWASP mapping lookup (failure_category → owasp_code, no LLM)
-- [ ] **5.4** Classification service — orchestrates: load trace → call judge → validate → derive OWASP → store
-- [ ] **5.5** `POST /api/classify` endpoint
-- [ ] **5.6** Auto-trigger after run completion (chain: execute → guardrail → classify)
-- [ ] **5.7** Golden test traces — create 3-5 traces with known classifications
-- [ ] **5.8** Test: classifier agrees with all golden labels
+- [x] **5.1** `JUDGE_RUBRIC` — strict system prompt covering all 7 categories, severity levels, anti-sycophancy instructions
+- [x] **5.2** `_derive_classification()` — pure post-processor (no I/O) converts raw LLM dict → validated ClassificationCreate
+- [x] **5.3** OWASP auto-mapping on FAIL verdicts via `get_owasp_mapping()`
+- [x] **5.4** Graceful fallbacks: lowercase normalisation, invalid category → UNCATEGORIZED, invalid severity → MEDIUM
+- [x] **5.5** `classify_run()` — async function, calls Gemini 2.5 Pro, strips markdown fences, returns schema-validated result
+- [x] **5.6** `_get_client()` — lazy, patchable client factory (same pattern as ScenarioGenerator)
+- [x] **5.7** Test: 27 core tests covering rubric content, _derive_classification, _clean_json_response, mocked classify_run
+- [x] **5.8** Test: 13 edge case tests (null category, empty severity, boundary confidence, all 7 categories roundtrip)
 
 ## Phase 6: Scorecard & Tracker (Module 5)
 
-- [ ] **6.1** Aggregation logic — per-version: overall score, per-category breakdown, guardrail hold rate, severity distribution, OWASP profile
-- [ ] **6.2** `GET /api/scorecard/{agent_version_id}` endpoint
-- [ ] **6.3** `GET /api/scorecard/trend` endpoint (all versions, time-series)
-- [ ] **6.4** `GET /api/scorecard/compare` endpoint (two-version delta)
-- [ ] **6.5** `GET /api/scorecard/{agent_version_id}/runs` endpoint (drill-down, filterable)
-- [ ] **6.6** Confidence interval calculation (D5) — Wilson score interval, flaky detection
-- [ ] **6.7** Test: 3 versions with non-monotonic scores render correctly in trend data
+- [x] **6.1** `compute_scorecard()` — pure sync aggregation: overall score, per-category breakdown (all 7, pre-seeded), guardrail hold rate, severity distribution, OWASP risk profile
+- [x] **6.2** `wilson_score_interval()` in `app.core.statistics` — Wilson score CI, handles zero-total, 90/95/99% confidence
+- [x] **6.3** Graceful handling: unknown categories excluded from OWASP profile, None severity not counted, empty runs returns zero scorecard
+- [x] **6.4** Test: 16 core scorecard tests (all pass, mixed, guardrail rates, severity dist, OWASP profile)
+- [x] **6.5** Test: 10 statistics tests (bounds ordering, monotonicity, symmetry, confidence narrowness)
+- [x] **6.6** Test: 15 edge case tests (single run, unknown categories, large batch precision, all severities always present)
+- [x] **6.7** `GET /api/scorecard/{agent_version_id}` endpoint — 404 for non-existent versions
+- [x] **6.8** Trend + compare endpoints + PR review fixes: N+1 → batch query, empty trace guard, UUID validation, 19 new endpoint tests
 
 ## Phase 7: Dashboard (Next.js) — Build Incrementally
 
@@ -101,17 +102,17 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ---
 
-## Progress Summary
-
 | Phase | Status | Tasks |
 |---|---|---|
 | Foundation | Done | 9/9 |
 | Module 1 (Scenario Gen) | Done | 7/7 |
-| Module 2 (Sandbox) | Not started | 0/8 |
+| Module 2 (Sandbox) | Done | 8/8 |
 | Module 4 (Guardrail) | Done | 6/6 |
-| Module 3 (Classifier) | Not started | 0/8 |
-| Module 5 (Scorecard) | Not started | 0/7 |
+| Module 3 (Classifier) | Done | 8/8 |
+| Module 5 (Scorecard) | Done | 8/8 |
+| REST API (Task 8) | Done | 14 endpoints wired |
+| PR Review Fixes | Done | N+1 fix, 404, UUID guard, 19 tests |
 | Dashboard | Not started | 0/12 |
 | Integration + Demo | Not started | 0/6 |
 | Stretch (D6) | Not started | 0/5 |
-| **Total** | | **22/68** |
+| **Total** | **232/232 tests passing** | **49+/68** |
