@@ -59,13 +59,14 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 6: Scorecard & Tracker (Module 5)
 
-- [ ] **6.1** Aggregation logic — per-version: overall score, per-category breakdown, guardrail hold rate, severity distribution, OWASP profile
-- [ ] **6.2** `GET /api/scorecard/{agent_version_id}` endpoint
-- [ ] **6.3** `GET /api/scorecard/trend` endpoint (all versions, time-series)
-- [ ] **6.4** `GET /api/scorecard/compare` endpoint (two-version delta)
-- [ ] **6.5** `GET /api/scorecard/{agent_version_id}/runs` endpoint (drill-down, filterable)
-- [ ] **6.6** Confidence interval calculation (D5) — Wilson score interval, flaky detection
-- [ ] **6.7** Test: 3 versions with non-monotonic scores render correctly in trend data
+- [x] **6.1** `compute_scorecard()` — pure sync aggregation: overall score, per-category breakdown (all 7, pre-seeded), guardrail hold rate, severity distribution, OWASP risk profile
+- [x] **6.2** `wilson_score_interval()` in `app.core.statistics` — Wilson score CI, handles zero-total, 90/95/99% confidence
+- [x] **6.3** Graceful handling: unknown categories excluded from OWASP profile, None severity not counted, empty runs returns zero scorecard
+- [x] **6.4** Test: 16 core scorecard tests (all pass, mixed, guardrail rates, severity dist, OWASP profile)
+- [x] **6.5** Test: 10 statistics tests (bounds ordering, monotonicity, symmetry, confidence narrowness)
+- [x] **6.6** Test: 15 edge case tests (single run, unknown categories, large batch precision, all severities always present)
+- [ ] **6.7** `GET /api/scorecard/{agent_version_id}` endpoint (Task 8)
+- [ ] **6.8** Trend + compare endpoints (Task 8)
 
 ## Phase 7: Dashboard (Next.js) — Build Incrementally
 
@@ -101,17 +102,15 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ---
 
-## Progress Summary
-
 | Phase | Status | Tasks |
 |---|---|---|
 | Foundation | Done | 9/9 |
 | Module 1 (Scenario Gen) | Done | 7/7 |
-| Module 2 (Sandbox) | Partial | 5/8 |
+| Module 2 (Sandbox) | Partial (3.5/3.6/3.7 need Task 8 API wiring) | 5/8 |
 | Module 4 (Guardrail) | Done | 6/6 |
-| Module 3 (Classifier) | Not started | 0/8 |
-| Module 5 (Scorecard) | Not started | 0/7 |
+| Module 3 (Classifier) | Done | 8/8 |
+| Module 5 (Scorecard) | Done | 6/8 (2 endpoints → Task 8) |
 | Dashboard | Not started | 0/12 |
 | Integration + Demo | Not started | 0/6 |
 | Stretch (D6) | Not started | 0/5 |
-| **Total** | | **27/68** |
+| **Total** | | **41/68** |

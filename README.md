@@ -26,8 +26,9 @@ We are actively developing the backend following strict Test-Driven Development 
 *   ✅ **CI/CD & DB Hardening:** Automated testing, Phase 2 migration
 *   ✅ **Task 5:** Sandbox Execution Harness (Module 2)
 *   ✅ **Task 6:** Failure Mode Classifier (Module 3)
-*   ⏳ **Task 7:** Scorecard & Statistics (Module 5 + D5)
-*   *... Tasks 8 through 10 pending.*
+*   ✅ **Task 7:** Scorecard & Statistics (Module 5 + D5)
+*   ⏳ **Task 8:** REST API + Full Pipeline Wiring
+*   *... Tasks 9–10 pending.*
 
 ## Setup & Installation
 
