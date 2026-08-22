@@ -65,8 +65,8 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 - [x] **6.4** Test: 16 core scorecard tests (all pass, mixed, guardrail rates, severity dist, OWASP profile)
 - [x] **6.5** Test: 10 statistics tests (bounds ordering, monotonicity, symmetry, confidence narrowness)
 - [x] **6.6** Test: 15 edge case tests (single run, unknown categories, large batch precision, all severities always present)
-- [ ] **6.7** `GET /api/scorecard/{agent_version_id}` endpoint (Task 8)
-- [ ] **6.8** Trend + compare endpoints (Task 8)
+- [x] **6.7** `GET /api/scorecard/{agent_version_id}` endpoint — 404 for non-existent versions
+- [x] **6.8** Trend + compare endpoints + PR review fixes: N+1 → batch query, empty trace guard, UUID validation, 19 new endpoint tests
 
 ## Phase 7: Dashboard (Next.js) — Build Incrementally
 
@@ -111,7 +111,8 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 | Module 3 (Classifier) | Done | 8/8 |
 | Module 5 (Scorecard) | Done | 8/8 |
 | REST API (Task 8) | Done | 14 endpoints wired |
+| PR Review Fixes | Done | N+1 fix, 404, UUID guard, 19 tests |
 | Dashboard | Not started | 0/12 |
 | Integration + Demo | Not started | 0/6 |
 | Stretch (D6) | Not started | 0/5 |
-| **Total** | | **49+/68** |
+| **Total** | **232/232 tests passing** | **49+/68** |
