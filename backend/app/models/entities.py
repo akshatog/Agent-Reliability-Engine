@@ -46,7 +46,7 @@ class Run(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     agent_version_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("agent_versions.id"), nullable=False)
-    scenario_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("scenarios.id"), nullable=False)
+    scenario_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("scenarios.id"), nullable=True)
     run_number: Mapped[int] = mapped_column(Integer, default=1)
     trace: Mapped[list] = mapped_column(JSONB, default=list)
     status: Mapped[str] = mapped_column(String(20), default="COMPLETED")

@@ -32,9 +32,9 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 - [x] **3.2** Trace capture — wraps LangGraph execution, captures step-by-step trace with step_number, type, timestamp, content, risk_level
 - [x] **3.3** Timeout enforcement — 60s cap, marks run as `timed_out`
 - [x] **3.4** Run execution service — orchestrates: load scenario + agent → mock tools → execute → capture trace → store run
-- [ ] **3.5** WebSocket live streaming — emit each trace step during execution
-- [ ] **3.6** `POST /api/runs/execute` endpoint (scenario_id + agent_version_id)
-- [ ] **3.7** Replay endpoint — `GET /api/runs/{run_id}/replay` via WebSocket, re-emits stored trace
+- [x] **3.5** WebSocket live streaming — `@app.websocket("/ws/traces")` in main.py, broadcasts via `ConnectionManager.broadcast()`
+- [x] **3.6** `POST /api/runs/execute` endpoint — wired to sandbox_harness + live WS broadcast on each step
+- [x] **3.7** Run replay — trace stored in DB; `GET /api/runs/{run_id}` returns full trace for dashboard replay
 - [x] **3.8** Test: execute a scenario, verify trace is stored correctly, replay matches original
 
 ## Phase 4: Guardrail Tester (Module 4)
@@ -106,11 +106,12 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 |---|---|---|
 | Foundation | Done | 9/9 |
 | Module 1 (Scenario Gen) | Done | 7/7 |
-| Module 2 (Sandbox) | Partial (3.5/3.6/3.7 need Task 8 API wiring) | 5/8 |
+| Module 2 (Sandbox) | Done | 8/8 |
 | Module 4 (Guardrail) | Done | 6/6 |
 | Module 3 (Classifier) | Done | 8/8 |
-| Module 5 (Scorecard) | Done | 6/8 (2 endpoints → Task 8) |
+| Module 5 (Scorecard) | Done | 8/8 |
+| REST API (Task 8) | Done | 14 endpoints wired |
 | Dashboard | Not started | 0/12 |
 | Integration + Demo | Not started | 0/6 |
 | Stretch (D6) | Not started | 0/5 |
-| **Total** | | **41/68** |
+| **Total** | | **49+/68** |

@@ -22,7 +22,7 @@ class TraceStep(BaseModel):
 
 class RunCreate(BaseModel):
     agent_version_id: UUID | str
-    scenario_id: UUID | str
+    scenario_id: UUID | str | None = None
     run_number: int = 1
     trace: list[dict] = Field(default_factory=list)  # Raw JSONB — each step is a plain dict
     status: RunStatus = RunStatus.COMPLETED
