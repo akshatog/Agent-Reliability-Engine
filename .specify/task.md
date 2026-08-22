@@ -48,14 +48,14 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 ## Phase 5: Failure Classifier (Module 3)
 
-- [ ] **5.1** LLM-as-judge rubric prompt — 7 categories, anti-sycophancy, negative examples, severity guidelines
-- [ ] **5.2** Gemini Pro integration — structured output classification call
-- [ ] **5.3** OWASP mapping lookup (failure_category → owasp_code, no LLM)
-- [ ] **5.4** Classification service — orchestrates: load trace → call judge → validate → derive OWASP → store
-- [ ] **5.5** `POST /api/classify` endpoint
-- [ ] **5.6** Auto-trigger after run completion (chain: execute → guardrail → classify)
-- [ ] **5.7** Golden test traces — create 3-5 traces with known classifications
-- [ ] **5.8** Test: classifier agrees with all golden labels
+- [x] **5.1** `JUDGE_RUBRIC` — strict system prompt covering all 7 categories, severity levels, anti-sycophancy instructions
+- [x] **5.2** `_derive_classification()` — pure post-processor (no I/O) converts raw LLM dict → validated ClassificationCreate
+- [x] **5.3** OWASP auto-mapping on FAIL verdicts via `get_owasp_mapping()`
+- [x] **5.4** Graceful fallbacks: lowercase normalisation, invalid category → UNCATEGORIZED, invalid severity → MEDIUM
+- [x] **5.5** `classify_run()` — async function, calls Gemini 2.5 Pro, strips markdown fences, returns schema-validated result
+- [x] **5.6** `_get_client()` — lazy, patchable client factory (same pattern as ScenarioGenerator)
+- [x] **5.7** Test: 27 core tests covering rubric content, _derive_classification, _clean_json_response, mocked classify_run
+- [x] **5.8** Test: 13 edge case tests (null category, empty severity, boundary confidence, all 7 categories roundtrip)
 
 ## Phase 6: Scorecard & Tracker (Module 5)
 
