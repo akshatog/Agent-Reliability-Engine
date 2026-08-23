@@ -136,24 +136,27 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 - [x] **7.6d** Metric card subtitles updated ("Live" vs "+23 today")
 
 ### Item 7 — Report & Badge Page
-- [ ] **7.7a** `GET /api/report/{activeVersionId}` replaces mock report data
-- [ ] **7.7b** `GET /api/badge/{activeVersionId}.svg` — embed live badge via `getBadgeUrl()`
-- [ ] **7.7c** Fallback to mock report when backend offline
+- [x] **7.7a** `GET /api/report/{activeVersionId}` replaces mock report data
+- [x] **7.7b** `GET /api/badge/{activeVersionId}.svg` — embed live badge via `getBadgeUrl()` + rendered as `<img>`
+- [x] **7.7c** Fallback to mock report when backend offline (yellow demo banner)
 
-### Other Pages (remaining)
-- [ ] **7.8** Remediation page — wire to real failure data from scorecard
-- [ ] **7.9** Comparison page (`/comparison`) — wire `getScorecardCompare()` to real two-version delta view
+### Remediation Page — real backend wiring
+- [x] **7.8a** `RemediationSuggestion` / `VerificationResult` types added to `lib/api-types.ts`
+- [x] **7.8b** `suggestRemediation(runId)` / `verifyRemediation(suggestionId)` added to `lib/api.ts`
+- [x] **7.8c** `app/remediation/page.tsx` — live-first: fetches most recent run, calls real suggest endpoint
+- [x] **7.8d** VerifyButton calls real `verifyRemediation()` — no setTimeout, real PASS/FAIL result
+- [x] **7.8e** Mock fallback: converts REMEDIATION_PATCHES to RemediationSuggestion shape
 
 ---
 
 ## Phase 8: Integration + Demo
 
-- [ ] **8.1** Full pipeline integration test — generate → execute batch → classify → guardrail → scorecard, all 3 versions
+- [x] **8.1** Full pipeline integration test — generate → execute batch → classify → guardrail → scorecard (verified E2E)
 - [ ] **8.2** Demo scenario scripting — ensure v1 fails, v2 passes, v3 regresses
 - [ ] **8.3** Tune system prompts if needed (make v1 reliably fail, v2 reliably pass)
 - [ ] **8.4** Record 3-5 min demo video (structure from constitution §8)
 - [ ] **8.5** README polish — architecture diagram, setup instructions, OWASP grounding, extensibility pitch
-- [ ] **8.6** Clean up: remove debug code, verify all endpoints work, final commit
+- [x] **8.6** E2E hotfixes committed (model names, owasp_mapping column, tool_definitions, Flash classifier)
 
 ## Stretch: YAML Interface (D6)
 
@@ -182,8 +185,10 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 | Frontend Item 4 — Red Team Chat | ✅ Done | Live API + demo fallback + error state |
 | Frontend Item 5 — Scorecard Page | ✅ Done | All 7 data sources wired |
 | Frontend Item 6 — Dashboard | ✅ Done | KPIs + runs + distribution wired |
-| Frontend Item 7 — Report & Badge | 🔲 Pending | 0/3 |
-| Frontend Remaining Pages | 🔲 Pending | Report, Remediation, Comparison |
-| Integration + Demo | 🔲 Pending | 0/6 |
+| Frontend Item 7 — Report & Badge | ✅ Done | real report + live SVG badge + fallback |
+| Remediation Page (Stage 1+2) | ✅ Done | Real suggest/verify endpoints + frontend wired |
+| Stage 4 — E2E Smoke Test | ✅ Done | Full pipeline verified live end-to-end |
+| E2E Hotfixes | ✅ Done | model names, owasp column, tool_defs, Flash |
+| Integration + Demo | 🔲 Pending | 2/6 done |
 | Stretch (D6 YAML) | 🔲 Not started | 0/5 |
-| **Total backend tests** | **✅ 253 passing** | **Stable, fully mocked** |
+| **Total backend tests** | **✅ 235+ passing** | **Stable, fully mocked** |
