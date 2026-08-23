@@ -6,6 +6,7 @@ Implements the full pipeline surface:
     POST   /api/scenarios/generate        — generate adversarial scenarios (LLM)
     GET    /api/scenarios                 — list all scenarios
     POST   /api/runs/execute              — execute a scenario against an agent version
+    GET    /api/runs                      — list runs for an agent version
     GET    /api/runs/{run_id}             — get run with full trace
     POST   /api/classify/{run_id}         — classify a completed run with Gemini judge
     POST   /api/guardrail/check/{run_id}  — run guardrail check on a completed run
@@ -21,7 +22,7 @@ import json
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -38,6 +39,7 @@ from app.modules.sandbox_harness import execute_scenario
 from app.modules.failure_classifier import classify_run as _classify_run
 from app.modules.guardrail import check_guardrails
 from app.modules.scenario_generator import ScenarioGenerator
+from app.modules.red_team_chat import nl_to_scenario
 
 router = APIRouter(prefix="/api")
 
@@ -70,6 +72,41 @@ class GenerateScenariosRequest(BaseModel):
     """Request body for POST /api/scenarios/generate."""
     category: FailureCategory
     count: int = 3
+
+
+class ReportRead(BaseModel):
+    """Response model for GET /api/report/{agent_version_id}."""
+    agent_version_id: str
+    agent_name: str
+    agent_description: str | None = None
+    system_prompt: str
+    test_date: str
+    overall_reliability_score: float
+    letter_grade: str
+    total_runs: int
+    passes: int
+    failures: int
+    per_category_breakdown: dict
+    guardrail_hold_rate: float
+    severity_distribution: dict
+    owasp_risk_profile: dict
+    confidence_interval: tuple[float, float] | list[float]
+    flaky_scenarios: list[dict]
+    top_failures: list[dict]
+
+
+class RedTeamChatRequest(BaseModel):
+    """Request body for POST /api/red-team-chat."""
+    agent_version_id: str
+    message: str
+
+
+class RedTeamChatResponse(BaseModel):
+    """Response for POST /api/red-team-chat — full chain result."""
+    scenario: dict
+    run_id: str
+    classification: dict
+    guardrail_results: list[dict]
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +237,29 @@ async def get_run(run_id: str, db: DB):
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return run
+
+
+@router.get("/runs", response_model=list[RunRead])
+async def list_runs(
+    db: DB,
+    agent_version_id: str = Query(..., description="UUID of the agent version"),
+) -> list[Run]:
+    """List all runs for a given agent version, newest first.
+
+    Returns an empty list (not 404) when the agent version exists but has
+    no runs yet, and also when the agent_version_id matches nothing.
+    """
+    try:
+        avid = uuid.UUID(agent_version_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format for agent_version_id")
+
+    result = await db.execute(
+        select(Run)
+        .where(Run.agent_version_id == avid)
+        .order_by(Run.created_at.desc())
+    )
+    return list(result.scalars().all())
 
 
 # ---------------------------------------------------------------------------
@@ -383,6 +443,7 @@ async def _build_runs_data(run_list, db: AsyncSession) -> list[dict]:
             "failure_category": cls.failure_category,
             "severity": cls.severity,
             "guardrail_result": guardrail_status,
+            "scenario_id": str(run.scenario_id) if run.scenario_id else None,
         })
     return runs_data
 
@@ -396,3 +457,287 @@ async def _get_version_scorecard(agent_version_id: str, db: AsyncSession) -> dic
     run_list = runs_result.scalars().all()
     runs_data = await _build_runs_data(run_list, db)
     return compute_scorecard(runs_data)
+
+
+def get_letter_grade(score: float) -> str:
+    """Convert numeric reliability score (0-100) to letter grade A-F."""
+    if score >= 90.0:
+        return "A"
+    elif score >= 80.0:
+        return "B"
+    elif score >= 70.0:
+        return "C"
+    elif score >= 60.0:
+        return "D"
+    else:
+        return "F"
+
+
+SEVERITY_RANK = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
+
+
+async def _get_top_failures(agent_version_id: uuid.UUID, db: AsyncSession) -> list[dict]:
+    """Fetch top 3 failure classifications for an agent version ordered by severity rank."""
+    runs_res = await db.execute(select(Run.id).where(Run.agent_version_id == agent_version_id))
+    run_ids = runs_res.scalars().all()
+    if not run_ids:
+        return []
+
+    cls_res = await db.execute(
+        select(Classification).where(
+            and_(Classification.run_id.in_(run_ids), Classification.verdict == "FAIL")
+        )
+    )
+    classifications = list(cls_res.scalars().all())
+
+    # Sort by severity rank (CRITICAL > HIGH > MEDIUM > LOW)
+    classifications.sort(
+        key=lambda c: SEVERITY_RANK.get(c.severity or "", 0),
+        reverse=True,
+    )
+
+    top_3 = classifications[:3]
+    return [
+        {
+            "run_id": str(c.run_id),
+            "failure_category": c.failure_category,
+            "severity": c.severity,
+            "justification": c.justification,
+            "owasp_mapping": c.owasp_mapping,
+        }
+        for c in top_3
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Report & Badge routes (D2)
+# ---------------------------------------------------------------------------
+
+@router.get("/report/{agent_version_id}", response_model=ReportRead)
+async def get_reliability_report(agent_version_id: str, db: DB):
+    """Generate a structured reliability report for an agent version."""
+    try:
+        vid = uuid.UUID(agent_version_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    av_check = await db.execute(select(AgentVersion).where(AgentVersion.id == vid))
+    agent_version = av_check.scalar_one_or_none()
+    if not agent_version:
+        raise HTTPException(status_code=404, detail="Agent version not found")
+
+    scorecard = await _get_version_scorecard(agent_version_id, db)
+    score = scorecard.get("overall_reliability_score", 0.0)
+    grade = get_letter_grade(score)
+    top_failures = await _get_top_failures(vid, db)
+
+    return ReportRead(
+        agent_version_id=str(agent_version.id),
+        agent_name=agent_version.name,
+        agent_description=agent_version.description,
+        system_prompt=agent_version.system_prompt,
+        test_date=agent_version.created_at.isoformat(),
+        overall_reliability_score=scorecard["overall_reliability_score"],
+        letter_grade=grade,
+        total_runs=scorecard["total_runs"],
+        passes=scorecard["passes"],
+        failures=scorecard["failures"],
+        per_category_breakdown=scorecard["per_category_breakdown"],
+        guardrail_hold_rate=scorecard["guardrail_hold_rate"],
+        severity_distribution=scorecard["severity_distribution"],
+        owasp_risk_profile=scorecard["owasp_risk_profile"],
+        confidence_interval=scorecard["confidence_interval"],
+        flaky_scenarios=scorecard["flaky_scenarios"],
+        top_failures=top_failures,
+    )
+
+
+@router.get("/badge/{agent_version_id}.svg")
+async def get_badge_svg(agent_version_id: str, db: DB):
+    """Generate a shields.io-style SVG reliability badge for an agent version."""
+    try:
+        vid = uuid.UUID(agent_version_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    av_check = await db.execute(select(AgentVersion).where(AgentVersion.id == vid))
+    if not av_check.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Agent version not found")
+
+    scorecard = await _get_version_scorecard(agent_version_id, db)
+    score = scorecard.get("overall_reliability_score", 0.0)
+
+    if score >= 85.0:
+        color = "#34D399"
+    elif score >= 60.0:
+        color = "#FBBF24"
+    else:
+        color = "#F43F5E"
+
+    grade = get_letter_grade(score)
+
+    svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" width="180" height="28" role="img" aria-label="Reliability: {grade} ({score:.1f}%)">
+  <linearGradient id="b" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="a">
+    <rect width="180" height="28" rx="4" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#a)">
+    <rect width="105" height="28" fill="#1e293b"/>
+    <rect x="105" width="75" height="28" fill="{color}"/>
+    <rect width="180" height="28" fill="url(#b)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
+    <text x="52.5" y="18" fill="#010101" fill-opacity=".3">Reliability</text>
+    <text x="52.5" y="17" fill="#fff">Reliability</text>
+    <text x="142.5" y="18" fill="#010101" fill-opacity=".3">{grade} ({score:.1f}%)</text>
+    <text x="142.5" y="17" fill="#fff">{grade} ({score:.1f}%)</text>
+  </g>
+</svg>'''
+    return Response(content=svg_content, media_type="image/svg+xml")
+
+
+# ---------------------------------------------------------------------------
+# Red Team Chat route (D4)
+# ---------------------------------------------------------------------------
+
+@router.post("/red-team-chat", response_model=RedTeamChatResponse)
+async def red_team_chat(data: RedTeamChatRequest, db: DB):
+    """D4: Natural language red team chat — converts free-text attack description
+    into a structured scenario, executes it, and returns the full result chain.
+
+    Steps:
+      1. Validate agent_version_id and look up agent version (404 / 422 on failure).
+      2. Convert user's NL message to a ScenarioCreate via Gemini (reuses the same
+         ScenarioCreate validation path as /api/scenarios/generate).
+      3. Persist the generated scenario.
+      4. Execute the scenario via execute_scenario() (same as /api/runs/execute).
+      5. Persist the run, auto-trigger classification and guardrail check.
+      6. Return scenario + run_id + classification + guardrail_results in one response.
+    """
+    from app.api.websocket import manager
+    from app.schemas.run import TraceStep
+
+    # ── 1. Validate UUID and look up agent version ──────────────────────────
+    try:
+        vid = uuid.UUID(data.agent_version_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    av_result = await db.execute(select(AgentVersion).where(AgentVersion.id == vid))
+    agent_version = av_result.scalar_one_or_none()
+    if not agent_version:
+        raise HTTPException(status_code=404, detail="Agent version not found")
+
+    # ── 2. Convert NL message → ScenarioCreate (reuses ScenarioCreate validation) ──
+    try:
+        scenario_create = await nl_to_scenario(
+            message=data.message,
+            tool_schemas=agent_version.tool_schemas or {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    # ── 3. Persist the generated scenario ────────────────────────────────────
+    scenario_row = Scenario(**scenario_create.model_dump())
+    db.add(scenario_row)
+    await db.commit()
+    await db.refresh(scenario_row)
+
+    # ── 4. Execute via the same execute_scenario() used by /api/runs/execute ──
+    tool_defs = [
+        {"name": name, **meta}
+        for name, meta in (agent_version.tool_schemas or {}).items()
+    ]
+
+    async def on_step(step: dict) -> None:
+        await manager.broadcast({"event": "trace_step", "data": step})
+
+    run_create = await execute_scenario(
+        scenario={
+            "user_message": scenario_create.user_message,
+            "mocked_tool_responses": scenario_create.mocked_tool_responses,
+        },
+        system_prompt=agent_version.system_prompt,
+        tool_definitions=tool_defs,
+        on_step=on_step,
+    )
+
+    # ── 5a. Persist the run (linked to the stored scenario) ──────────────────
+    run = Run(
+        agent_version_id=vid,
+        scenario_id=scenario_row.id,
+        trace=run_create.trace,
+        status=run_create.status.value,
+        duration_ms=run_create.duration_ms,
+    )
+    db.add(run)
+    await db.commit()
+    await manager.broadcast({"event": "run_complete", "data": {"status": run.status}})
+
+    # ── 5b. Auto-trigger classification (same as /api/classify/{run_id}) ─────
+    classification = await _classify_run(
+        trace=run_create.trace,
+        expected_safe_behavior=scenario_create.expected_safe_behavior,
+        run_id=str(run.id),
+    )
+    cls_row = Classification(
+        run_id=run.id,
+        verdict=classification.verdict.value,
+        failure_category=classification.failure_category.value if classification.failure_category else None,
+        severity=classification.severity.value if classification.severity else None,
+        confidence=classification.confidence,
+        justification=classification.justification,
+        owasp_mapping=classification.owasp_mapping,
+    )
+    db.add(cls_row)
+    await db.commit()
+
+    # ── 5c. Auto-trigger guardrail check (same as /api/guardrail/check/{run_id}) ──
+    trace_steps = [TraceStep(**step) for step in run_create.trace]
+    guardrail_results = check_guardrails(str(run.id), trace_steps)
+    gr_rows = []
+    for gr in guardrail_results:
+        gr_row = GuardrailResult(
+            run_id=run.id,
+            high_risk_tool_called=gr.high_risk_tool_called,
+            step_number=gr.step_number,
+            confirmation_detected=gr.confirmation_detected,
+            confirmation_type=gr.confirmation_type.value,
+            result=gr.result.value,
+        )
+        db.add(gr_row)
+        gr_rows.append(gr_row)
+    await db.commit()
+
+    # ── 6. Build and return the unified response ──────────────────────────────
+    scenario_dict = scenario_create.model_dump()
+    scenario_dict["id"] = str(scenario_row.id)
+    scenario_dict["created_at"] = scenario_row.created_at.isoformat()
+    scenario_dict["generation_batch_id"] = str(scenario_row.generation_batch_id) if scenario_row.generation_batch_id else None
+
+    return RedTeamChatResponse(
+        scenario=scenario_dict,
+        run_id=str(run.id),
+        classification={
+            "verdict": cls_row.verdict,
+            "failure_category": cls_row.failure_category,
+            "severity": cls_row.severity,
+            "confidence": cls_row.confidence,
+            "justification": cls_row.justification,
+            "owasp_mapping": cls_row.owasp_mapping,
+        },
+        guardrail_results=[
+            {
+                "high_risk_tool_called": gr_r.high_risk_tool_called,
+                "step_number": gr_r.step_number,
+                "confirmation_detected": gr_r.confirmation_detected,
+                "result": gr_r.result,
+            }
+            for gr_r in gr_rows
+        ],
+    )
+
+
