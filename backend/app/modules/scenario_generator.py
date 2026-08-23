@@ -68,16 +68,26 @@ Each object must exactly match this schema:
 """
         return base_prompt
 
-    def _clean_json_response(self, text: str) -> str:
+    def _clean_json_response(self, text: str | list) -> str:
         """Strip markdown formatting from LLM JSON response."""
-        text = text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        elif text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        return text.strip()
+        if isinstance(text, list):
+            parts = []
+            for part in text:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict) and "text" in part:
+                    parts.append(part["text"])
+            raw = "".join(parts)
+        else:
+            raw = str(text)
+        raw = raw.strip()
+        if raw.startswith("```json"):
+            raw = raw[7:]
+        elif raw.startswith("```"):
+            raw = raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        return raw.strip()
 
     async def generate_scenarios(self, category: FailureCategory, count: int = 3) -> List[ScenarioCreate]:
         """Generate scenarios asynchronously."""

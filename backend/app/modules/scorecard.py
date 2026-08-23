@@ -2,8 +2,9 @@
 
 Takes a list of run classification dicts and produces a rich aggregate
 reliability report: overall score, per-category breakdown, guardrail hold
-rate, severity distribution, OWASP risk profile, and a Wilson-score
-confidence interval.
+rate, severity distribution, OWASP risk profile, Wilson-score confidence
+interval, flaky scenario detection, and a per-category × per-severity
+failure heatmap.
 
 This module is intentionally pure (no database calls, no async) so it
 can be called from both the REST API layer and integration tests with
@@ -45,6 +46,13 @@ def compute_scorecard(runs_data: list[dict]) -> dict:
     """
     total = len(runs_data)
 
+    # ── Severity heatmap skeleton (pre-seeded at zero) ────────────────────────
+    # Shape: { category_str: { "critical": 0, "high": 0, "medium": 0, "low": 0 } }
+    _empty_heatmap = {
+        cat.value: {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for cat in _SCOREABLE_CATEGORIES
+    }
+
     # ── Empty case ────────────────────────────────────────────────────────────
     if total == 0:
         return {
@@ -60,6 +68,8 @@ def compute_scorecard(runs_data: list[dict]) -> dict:
             "severity_distribution": {s.value: 0 for s in Severity},
             "owasp_risk_profile": {},
             "confidence_interval": (0.0, 0.0),
+            "flaky_scenarios": [],
+            "severity_heatmap": _empty_heatmap,
         }
 
     # ── Overall reliability score ─────────────────────────────────────────────
@@ -109,6 +119,42 @@ def compute_scorecard(runs_data: list[dict]) -> dict:
     # ── Wilson-score confidence interval (D5) ─────────────────────────────────
     ci = wilson_score_interval(passes, total)
 
+    # ── Flaky scenario detection (D5) ─────────────────────────────────────────
+    scen_groups: dict[str, list[str]] = {}
+    for r in runs_data:
+        scen_id = r.get("scenario_id")
+        if scen_id:
+            scen_groups.setdefault(str(scen_id), []).append(str(r.get("verdict", "")))
+
+    flaky_scenarios: list[dict] = []
+    for scen_id, verdicts in scen_groups.items():
+        if len(verdicts) >= 2:
+            pass_count = verdicts.count("PASS")
+            fail_count = len(verdicts) - pass_count
+            if pass_count > 0 and fail_count > 0:
+                flaky_scenarios.append({
+                    "scenario_id": scen_id,
+                    "pass_count": pass_count,
+                    "fail_count": fail_count,
+                    "total_runs": len(verdicts),
+                })
+
+    # ── Severity heatmap — per-category × per-severity failure counts ──────────
+    # Only FAIL runs with a scoreable category and known severity are counted.
+    # Severity values are lowercased to match the heatmap column keys.
+    sev_map = {"CRITICAL": "critical", "HIGH": "high", "MEDIUM": "medium", "LOW": "low"}
+    severity_heatmap: dict[str, dict[str, int]] = {
+        cat.value: {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for cat in _SCOREABLE_CATEGORIES
+    }
+    for r in runs_data:
+        if r.get("verdict") != "FAIL":
+            continue
+        cat_str = r.get("failure_category")
+        sev_str = r.get("severity")
+        if cat_str and cat_str in severity_heatmap and sev_str and sev_str in sev_map:
+            severity_heatmap[cat_str][sev_map[sev_str]] += 1
+
     return {
         "overall_reliability_score": score,
         "total_runs": total,
@@ -119,4 +165,6 @@ def compute_scorecard(runs_data: list[dict]) -> dict:
         "severity_distribution": sev_dist,
         "owasp_risk_profile": owasp_profile,
         "confidence_interval": ci,
+        "flaky_scenarios": flaky_scenarios,
+        "severity_heatmap": severity_heatmap,
     }
