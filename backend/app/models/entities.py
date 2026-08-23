@@ -34,7 +34,7 @@ class Scenario(Base):
     expected_tool_sequence: Mapped[list] = mapped_column(JSONB, default=list)
     mocked_tool_responses: Mapped[dict] = mapped_column(JSONB, default=dict)
     difficulty: Mapped[str] = mapped_column(String(20), default="medium")
-    owasp_mapping: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    owasp_mapping: Mapped[str | None] = mapped_column(String(50), nullable=True)
     generation_batch_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -78,7 +78,7 @@ class Classification(Base):
     severity: Mapped[str | None] = mapped_column(String(20), nullable=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     justification: Mapped[str] = mapped_column(Text, nullable=False)
-    owasp_mapping: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    owasp_mapping: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     run: Mapped["Run"] = relationship(back_populates="classification")

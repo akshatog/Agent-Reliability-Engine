@@ -201,10 +201,20 @@ async def execute_run(data: ExecuteRunRequest, db: DB):
         """Broadcast each trace step to all connected WebSocket clients."""
         await manager.broadcast({"event": "trace_step", "data": step})
 
+    # If caller doesn't pass tool_definitions, build from agent_version.tool_schemas.
+    # Each entry in tool_schemas is keyed by tool name, so inject 'name' into each dict.
+    if data.tool_definitions:
+        effective_tools = data.tool_definitions
+    else:
+        effective_tools = [
+            {"name": tool_name, **tool_spec}
+            for tool_name, tool_spec in (agent_version.tool_schemas or {}).items()
+        ]
+
     run_create = await execute_scenario(
         scenario=scenario_dict,
         system_prompt=agent_version.system_prompt,
-        tool_definitions=data.tool_definitions or list(agent_version.tool_schemas.values()),
+        tool_definitions=effective_tools,
         timeout_seconds=data.timeout_seconds,
         on_step=on_step,
     )
