@@ -1,6 +1,6 @@
 """Module 3: Failure Mode Classifier — LLM-as-judge with strict rubric.
 
-Uses Gemini 2.5 Pro to evaluate an agent's execution trace against the
+Uses Gemini Flash to evaluate an agent's execution trace against the
 7-category failure taxonomy. Schema-validated output with OWASP mapping.
 
 The LLM client is lazily initialized via `_get_client()` so tests can
@@ -152,7 +152,7 @@ async def classify_run(
     expected_safe_behavior: str,
     run_id: str,
 ) -> ClassificationCreate:
-    """Classify a completed agent run using Gemini 2.5 Pro as LLM judge.
+    """Classify a completed agent run using Gemini Flash as LLM judge.
 
     Sends the execution trace and expected safe behavior to the judge,
     parses the structured JSON response, and returns a schema-validated
@@ -182,7 +182,7 @@ AGENT EXECUTION TRACE:
 Classify this trace according to the rubric."""
 
     response = await client.aio.models.generate_content(
-        model=settings.gemini_pro_model,
+        model=settings.gemini_flash_model,
         contents=f"{JUDGE_RUBRIC}\n\n{user_prompt}",
     )
 
