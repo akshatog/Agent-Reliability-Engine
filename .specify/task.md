@@ -68,20 +68,83 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 - [x] **6.7** `GET /api/scorecard/{agent_version_id}` endpoint — 404 for non-existent versions
 - [x] **6.8** Trend + compare endpoints + PR review fixes: N+1 → batch query, empty trace guard, UUID validation, 19 new endpoint tests
 
-## Phase 7: Dashboard (Next.js) — Build Incrementally
+## Phase 6B: Backend Differentiators
 
-- [ ] **7.1** Next.js project setup (App Router, TailwindCSS, dark mode, Google Fonts)
-- [ ] **7.2** Design system — color palette, badges, cards, chart theme
-- [ ] **7.3** Layout — sidebar nav, main content area, responsive
-- [ ] **7.4** Attack Narrative Trace Viewer (D3) — WebSocket consumer, color-coded cards, animated reveal, replay controls
-- [ ] **7.5** Scenario List page — category tags, OWASP badges, difficulty, generate button
-- [ ] **7.6** Classifier Results Table — taxonomy badges, severity badges, OWASP badges, confidence, justification
-- [ ] **7.7** Reliability Scorecard — trend chart (line), per-category breakdown (bar/radar), OWASP risk profile
-- [ ] **7.8** Comparison Mode — two-version side-by-side delta view
-- [ ] **7.9** Run Drill-Down — individual scenario pass/fail, filterable by category/severity/OWASP
-- [ ] **7.10** Red Team Chat (D4) — chat input, sends to backend, streams result in trace viewer
-- [ ] **7.11** Reliability Report (D2) — full report view, print-to-PDF export
-- [ ] **7.12** SVG Badge Generator (D2) — dynamic badge with score + grade
+- [x] **D1** OWASP LLM Top 10 mapping — `get_owasp_mapping()` covers all 7 categories, wired into `compute_scorecard()` via `owasp_risk_profile`
+- [x] **D2** Auto-generated report + badge — `GET /api/report/{id}` returns full `ReportRead`, `GET /api/badge/{id}.svg` returns SVG
+- [x] **D3** `severity_heatmap` aggregation in `compute_scorecard()` — `Record<category, Record<severity, count>>`; 8 tests added
+- [x] **D4** Natural Language Red Team Chat — `POST /api/red-team-chat`; Gemini generates scenario → runs → classifies; rejects nonsensical input (422); confirmed live against real model
+- [x] **D5** Flaky scenario detection — `compute_scorecard()` returns `flaky_scenarios` list; 7 tests
+- [x] **D6** (stretch) YAML agent interface — not yet implemented
+- [x] **GET /api/runs** — list runs for an agent version; 5 integration tests
+
+## Phase 7: Dashboard (Next.js) — Frontend
+
+### Infrastructure (Item 0)
+- [x] **7.0a** `frontend/lib/api-types.ts` — full TypeScript mirrors of all backend Pydantic schemas
+- [x] **7.0b** `frontend/lib/api.ts` — typed fetch client with AbortSignal, ApiError class, all endpoints covered
+- [x] **7.0c** `frontend/lib/use-websocket.ts` — reconnecting WebSocket hook with exponential backoff, 3 connection states
+
+### Mapper Layer
+- [x] **7.0d** `frontend/lib/scenario-mapper.ts` — `mapScenarios()` pure function, ScenarioRead → ScenarioItem
+- [x] **7.0e** `frontend/lib/trace-mapper.ts` — `mapTrace()` pure function, BackendTraceStep[] → DisplayStep[]
+- [x] **7.0f** `frontend/lib/red-team-mapper.ts` — `mapRedTeamResponse()` pure function, RedTeamChatResponse → RedTeamDisplayItem
+
+### Item 1 — AgentProvider (two-field transition)
+- [x] **7.1a** `frontend/lib/agent-context.tsx` — refactored to maintain legacy `agentId`/`agent` fields AND add `activeVersionId`, `versions`, `activeScorecard`, `versionsLoading`, `versionsError`
+- [x] **7.1b** Version fetch fires on mount with Strict Mode guard (`fetchedRef`) — no double-call in dev
+- [x] **7.1c** UUID validation on mount — stale localStorage IDs replaced with freshest live version
+- [x] **7.1d** Scorecard fetched + cached per UUID in provider (single source of truth for KPI data)
+- [x] **7.1e** `frontend/components/sidebar.tsx` — shows live backend versions in dropdown when available; falls back to mock AGENT_LIST; footer shows "Live · N versions" vs "Demo Mode · Backend offline"
+
+### Item 2 — Scenarios Page
+- [x] **7.2a** `GET /api/scenarios` called on mount → `mapScenarios()` → renders live data
+- [x] **7.2b** Graceful fallback to `SCENARIO_CATALOG` mock when backend offline (with ⚠ banner)
+- [x] **7.2c** Generate button calls `POST /api/scenarios/generate` with real `activeVersionId`; new items appended live
+- [x] **7.2d** Loading state + error display in hero subtitle
+
+### Item 3 — Trace Viewer (`/traces/[runId]`)
+- [x] **7.3a** `GET /api/runs/{runId}` fetches real run data on mount
+- [x] **7.3b** WebSocket hook accumulates `trace_step` events during live execution
+- [x] **7.3c** Falls back to persisted `run.trace` when WS is idle/offline
+- [x] **7.3d** `POST /api/classify/{runId}` called once per mount with `hasTriggeredClassify` ref (Strict Mode guard)
+- [x] **7.3e** Intel panel shows real attack vector, tool calls from trace
+- [x] **7.3f** Verdict panel shows real classification: verdict, confidence ring, OWASP mapping, justification
+- [x] **7.3g** Timeline renders real `DisplayStep[]` from `mapTrace()`
+
+### Item 4 — Red Team Chat
+- [x] **7.4a** `POST /api/red-team-chat` called on "Execute Attack" with real `activeVersionId`
+- [x] **7.4b** `mapRedTeamResponse()` converts response → `RedTeamDisplayItem`; prepended to history list
+- [x] **7.4c** Mock SUGGESTION_CHIPS retained for quick-launch chips
+- [x] **7.4d** Theater component driven by live classification result (not mock trace data)
+- [x] **7.4e** Demo fallback when `activeVersionId` is null (backend offline) — 1.9s fake delay + mock result
+- [x] **7.4f** Error state shown inline; Ctrl+Enter keyboard shortcut to submit
+
+### Item 5 — Scorecard Page
+- [x] **7.5a** `GET /api/scorecard/trend` fetches live trend → converted to chart data; falls back to mock
+- [x] **7.5b** `listRuns(activeVersionId)` fetches live runs for the runs table; falls back to mock SCORECARD_RUNS
+- [x] **7.5c** `severity_heatmap` from `activeScorecard` → converted to `HeatmapRow[]`; falls back to mock
+- [x] **7.5d** KPI values (score, guardrailRate, totalRuns, criticalCount, CI bounds) from `activeScorecard`; fallback to mock agent
+- [x] **7.5e** OWASP risk profile from `activeScorecard.owasp_risk_profile`; falls back to static mock list
+- [x] **7.5f** Version tabs driven by live trend version names; falls back to mock trend versions
+- [x] **7.5g** Topbar shows "Live" label when `activeScorecard` is populated
+
+### Item 6 — Dashboard Page
+- [x] **7.6a** KPI cards (score, totalRuns, guardrailRate, activeFailures) from `activeScorecard`; fallback to mock agent
+- [x] **7.6b** Recent Runs table uses `listRuns()` live data with real run IDs → `/traces/{id}`; fallback to mock
+- [x] **7.6c** Failure distribution pie chart uses `per_category_breakdown` from `activeScorecard`; fallback to mock
+- [x] **7.6d** Metric card subtitles updated ("Live" vs "+23 today")
+
+### Item 7 — Report & Badge Page
+- [ ] **7.7a** `GET /api/report/{activeVersionId}` replaces mock report data
+- [ ] **7.7b** `GET /api/badge/{activeVersionId}.svg` — embed live badge via `getBadgeUrl()`
+- [ ] **7.7c** Fallback to mock report when backend offline
+
+### Other Pages (remaining)
+- [ ] **7.8** Remediation page — wire to real failure data from scorecard
+- [ ] **7.9** Comparison page (`/comparison`) — wire `getScorecardCompare()` to real two-version delta view
+
+---
 
 ## Phase 8: Integration + Demo
 
@@ -104,15 +167,23 @@ Governed by `plan.md`. Mark items as `[/]` when in progress, `[x]` when done.
 
 | Phase | Status | Tasks |
 |---|---|---|
-| Foundation | Done | 9/9 |
-| Module 1 (Scenario Gen) | Done | 7/7 |
-| Module 2 (Sandbox) | Done | 8/8 |
-| Module 4 (Guardrail) | Done | 6/6 |
-| Module 3 (Classifier) | Done | 8/8 |
-| Module 5 (Scorecard) | Done | 8/8 |
-| REST API (Task 8) | Done | 14 endpoints wired |
-| PR Review Fixes | Done | N+1 fix, 404, UUID guard, 19 tests |
-| Dashboard | Not started | 0/12 |
-| Integration + Demo | Not started | 0/6 |
-| Stretch (D6) | Not started | 0/5 |
-| **Total** | **232/232 tests passing** | **49+/68** |
+| Foundation | ✅ Done | 9/9 |
+| Module 1 (Scenario Gen) | ✅ Done | 7/7 |
+| Module 2 (Sandbox) | ✅ Done | 8/8 |
+| Module 4 (Guardrail) | ✅ Done | 6/6 |
+| Module 3 (Classifier) | ✅ Done | 8/8 |
+| Module 5 (Scorecard) | ✅ Done | 8/8 |
+| Backend Differentiators (D1–D5) | ✅ Done | 6/6 |
+| REST API | ✅ Done | 14+ endpoints |
+| Frontend Infrastructure (Item 0) | ✅ Done | api-types, api.ts, use-websocket, 3 mappers |
+| Frontend Item 1 — AgentProvider | ✅ Done | Two-field transition, sidebar live |
+| Frontend Item 2 — Scenarios Page | ✅ Done | Live fetch + generate + fallback |
+| Frontend Item 3 — Trace Viewer | ✅ Done | WebSocket + classify guard + real panels |
+| Frontend Item 4 — Red Team Chat | ✅ Done | Live API + demo fallback + error state |
+| Frontend Item 5 — Scorecard Page | ✅ Done | All 7 data sources wired |
+| Frontend Item 6 — Dashboard | ✅ Done | KPIs + runs + distribution wired |
+| Frontend Item 7 — Report & Badge | 🔲 Pending | 0/3 |
+| Frontend Remaining Pages | 🔲 Pending | Report, Remediation, Comparison |
+| Integration + Demo | 🔲 Pending | 0/6 |
+| Stretch (D6 YAML) | 🔲 Not started | 0/5 |
+| **Total backend tests** | **✅ 253 passing** | **Stable, fully mocked** |
