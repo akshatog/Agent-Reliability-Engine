@@ -38,3 +38,15 @@ Thumbs.db
 # Temp / scratch
 test_gemini.py
 .pr_body.md
+
+# Next.js / Node
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+frontend/.env.local
+frontend/.env.*.local
+*.tsbuildinfo
+frontend/next-env.d.ts
+
+# Screenshots / audit artifacts (not source code)
+audit-screenshots/
