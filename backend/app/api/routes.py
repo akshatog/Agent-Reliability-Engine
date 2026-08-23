@@ -40,6 +40,11 @@ from app.modules.failure_classifier import classify_run as _classify_run
 from app.modules.guardrail import check_guardrails
 from app.modules.scenario_generator import ScenarioGenerator
 from app.modules.red_team_chat import nl_to_scenario
+from app.modules.remediation import (
+    suggest_remediation as _suggest_remediation,
+    verify_remediation as _verify_remediation,
+    RemediationSuggestion,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -741,3 +746,154 @@ async def red_team_chat(data: RedTeamChatRequest, db: DB):
     )
 
 
+# ---------------------------------------------------------------------------
+# Remediation routes (D6: suggest + verify)
+# ---------------------------------------------------------------------------
+
+# In-process store for suggestions (keyed by suggestion_id).
+# These are ephemeral — not persisted to DB since they are verification
+# artifacts, not authoritative data. A restart clears them (acceptable
+# for demo scope).
+_suggestion_store: dict[str, RemediationSuggestion] = {}
+
+
+@router.post("/remediation/suggest/{run_id}")
+async def remediation_suggest(run_id: str, db: DB):
+    """Generate an AI-suggested patch for a failed, classified run.
+
+    Requires the run to exist and have a classification (FAIL verdict).
+    Uses Gemini Flash to generate a targeted system_prompt or tool_schema patch.
+
+    Returns a RemediationSuggestion object. Does NOT auto-apply the patch.
+    """
+    try:
+        rid = uuid.UUID(run_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    # Load the run
+    run_result = await db.execute(select(Run).where(Run.id == rid))
+    run = run_result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    # Load the classification
+    cls_result = await db.execute(
+        select(Classification).where(Classification.run_id == rid)
+    )
+    classification = cls_result.scalar_one_or_none()
+    if not classification:
+        raise HTTPException(
+            status_code=422,
+            detail="Run has not been classified yet — call POST /api/classify/{run_id} first",
+        )
+    if classification.verdict != "FAIL":
+        raise HTTPException(
+            status_code=422,
+            detail="Only FAIL runs can have remediation suggestions generated",
+        )
+
+    # Load the agent version for system_prompt and tool_schemas
+    av_result = await db.execute(
+        select(AgentVersion).where(AgentVersion.id == run.agent_version_id)
+    )
+    agent_version = av_result.scalar_one_or_none()
+    if not agent_version:
+        raise HTTPException(status_code=404, detail="Agent version not found")
+
+    classification_dict = {
+        "verdict": classification.verdict,
+        "failure_category": classification.failure_category,
+        "severity": classification.severity,
+        "confidence": classification.confidence,
+        "justification": classification.justification,
+        "owasp_mapping": classification.owasp_mapping,
+    }
+
+    suggestion = await _suggest_remediation(
+        run_id=run_id,
+        trace=run.trace,
+        classification=classification_dict,
+        system_prompt=agent_version.system_prompt,
+        tool_schemas=agent_version.tool_schemas or {},
+    )
+
+    # Store in-process so verify can retrieve it by suggestion_id
+    _suggestion_store[suggestion.suggestion_id] = suggestion
+
+    return {
+        "suggestion_id": suggestion.suggestion_id,
+        "run_id": suggestion.run_id,
+        "category": suggestion.category,
+        "severity": suggestion.severity,
+        "title": suggestion.title,
+        "description": suggestion.description,
+        "patch_type": suggestion.patch_type,
+        "before": suggestion.before,
+        "after": suggestion.after,
+        "filename": suggestion.filename,
+    }
+
+
+@router.post("/remediation/verify/{suggestion_id}")
+async def remediation_verify(suggestion_id: str, db: DB):
+    """Re-run the original scenario with the suggested patch applied.
+
+    Retrieves the suggestion from the in-process store, fetches the
+    original scenario from the run, and executes a REAL re-run through
+    the full pipeline (execute -> classify). Returns honest pass/fail.
+    """
+    # suggestion_id is a UUID string but not a DB UUID — validate format
+    try:
+        uuid.UUID(suggestion_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid UUID format")
+
+    suggestion = _suggestion_store.get(suggestion_id)
+    if not suggestion:
+        raise HTTPException(
+            status_code=404,
+            detail="Suggestion not found — call POST /api/remediation/suggest/{run_id} first",
+        )
+
+    # Fetch the original run to get the scenario details
+    try:
+        rid = uuid.UUID(suggestion.run_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid run_id in suggestion")
+
+    run_result = await db.execute(select(Run).where(Run.id == rid))
+    run = run_result.scalar_one_or_none()
+    if not run:
+        raise HTTPException(status_code=404, detail="Original run not found")
+
+    # Build original_scenario from the run's linked scenario (or use defaults)
+    original_scenario: dict = {
+        "user_message": "",
+        "mocked_tool_responses": {},
+        "expected_safe_behavior": "The agent should behave safely.",
+    }
+    if run.scenario_id:
+        sc_result = await db.execute(
+            select(Scenario).where(Scenario.id == run.scenario_id)
+        )
+        sc = sc_result.scalar_one_or_none()
+        if sc:
+            original_scenario["user_message"] = sc.user_message
+            original_scenario["mocked_tool_responses"] = sc.mocked_tool_responses
+            original_scenario["expected_safe_behavior"] = sc.expected_safe_behavior
+
+    result = await _verify_remediation(
+        suggestion=suggestion,
+        original_scenario=original_scenario,
+    )
+
+    return {
+        "suggestion_id": result.suggestion_id,
+        "verdict": result.verdict,
+        "confidence": result.confidence,
+        "justification": result.justification,
+        "failure_category": result.failure_category,
+        "new_run_status": result.new_run_status,
+        "new_run_trace": result.new_run_trace,
+    }
