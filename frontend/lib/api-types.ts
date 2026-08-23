@@ -187,3 +187,30 @@ export interface ReportRead {
   flaky_scenarios: FlakeyScenario[]
   top_failures: TopFailure[]
 }
+
+// ── Remediation ────────────────────────────────────────────────────────────
+
+/** Returned by POST /api/remediation/suggest/{run_id} */
+export interface RemediationSuggestion {
+  suggestion_id: string
+  run_id: string
+  category: string
+  severity: string
+  title: string
+  description: string
+  patch_type: 'system_prompt' | 'tool_schema'
+  before: string
+  after: string
+  filename: string
+}
+
+/** Returned by POST /api/remediation/verify/{suggestion_id} */
+export interface VerificationResult {
+  suggestion_id: string
+  verdict: 'PASS' | 'FAIL'
+  confidence: number   // 0.0 – 1.0
+  justification: string
+  failure_category: string | null
+  new_run_status: string
+  new_run_trace: Record<string, unknown>[]
+}

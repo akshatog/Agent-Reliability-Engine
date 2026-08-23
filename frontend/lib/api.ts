@@ -16,6 +16,8 @@ import type {
   ScorecardData,
   ScorecardTrendEntry,
   ReportRead,
+  RemediationSuggestion,
+  VerificationResult,
 } from './api-types'
 
 export const BASE_URL = 'http://localhost:8000'
@@ -170,4 +172,28 @@ export function getReport(agentVersionId: string, signal?: AbortSignal): Promise
  */
 export function getBadgeUrl(agentVersionId: string): string {
   return `${BASE_URL}/api/badge/${agentVersionId}.svg`
+}
+
+// ── Remediation ────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/remediation/suggest/{run_id}
+ * Generates an AI patch suggestion for a failed, classified run.
+ */
+export function suggestRemediation(
+  runId: string,
+  signal?: AbortSignal,
+): Promise<RemediationSuggestion> {
+  return request(`/api/remediation/suggest/${runId}`, { method: 'POST' }, signal)
+}
+
+/**
+ * POST /api/remediation/verify/{suggestion_id}
+ * Re-runs the original scenario with the patched config. Returns honest pass/fail.
+ */
+export function verifyRemediation(
+  suggestionId: string,
+  signal?: AbortSignal,
+): Promise<VerificationResult> {
+  return request(`/api/remediation/verify/${suggestionId}`, { method: 'POST' }, signal)
 }
