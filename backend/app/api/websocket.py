@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+
 from fastapi import WebSocket
 
 
@@ -35,7 +36,7 @@ class ConnectionManager:
         for ws in list(self._connections):
             try:
                 await ws.send_text(data)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 self.disconnect(ws)
 
     @property

@@ -1,5 +1,12 @@
 """Tests for SQLAlchemy ORM models."""
-from app.models.entities import Base, AgentVersion, Scenario, Run, Classification, GuardrailResult
+from app.models.entities import (
+    AgentVersion,
+    Base,
+    Classification,
+    GuardrailResult,
+    Run,
+    Scenario,
+)
 
 
 class TestModelsExist:

@@ -11,8 +11,6 @@ Addresses Copilot DB schema analysis:
 - Issue 5: Add GIN index for JSONB trace queries
 """
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
 revision = 'a1b2c3d4e5f6'

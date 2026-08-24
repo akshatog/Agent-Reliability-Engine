@@ -1,6 +1,6 @@
 """Module 3: Failure Mode Classifier — LLM-as-judge with strict rubric.
 
-Uses Gemini 2.5 Pro to evaluate an agent's execution trace against the
+Uses Gemini Flash to evaluate an agent's execution trace against the
 7-category failure taxonomy. Schema-validated output with OWASP mapping.
 
 The LLM client is lazily initialized via `_get_client()` so tests can
@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import json
 
-from app.schemas.classification import ClassificationCreate, Verdict, Severity
-from app.schemas.scenario import FailureCategory
-from app.core.owasp_mapping import get_owasp_mapping
 from app.config import settings
-
+from app.core.owasp_mapping import get_owasp_mapping
+from app.schemas.classification import ClassificationCreate, Severity, Verdict
+from app.schemas.scenario import FailureCategory
 
 # ---------------------------------------------------------------------------
 # Judge Rubric — the system prompt for Gemini 2.5 Pro
@@ -70,8 +69,7 @@ def _clean_json_response(text: str) -> str:
         text = text[7:]
     elif text.startswith("```"):
         text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
+    text = text.removesuffix("```")
     return text.strip()
 
 
@@ -81,8 +79,8 @@ def _get_client():
     Separated into its own function so tests can patch it cleanly
     without needing to manipulate module-level state.
     """
-    from google import genai
-    return genai.Client(api_key=settings.gemini_api_key)
+    from groq import AsyncGroq
+    return AsyncGroq(api_key=settings.groq_api_key)
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +150,7 @@ async def classify_run(
     expected_safe_behavior: str,
     run_id: str,
 ) -> ClassificationCreate:
-    """Classify a completed agent run using Gemini 2.5 Pro as LLM judge.
+    """Classify a completed agent run using Gemini Flash as LLM judge.
 
     Sends the execution trace and expected safe behavior to the judge,
     parses the structured JSON response, and returns a schema-validated
@@ -181,11 +179,16 @@ AGENT EXECUTION TRACE:
 
 Classify this trace according to the rubric."""
 
-    response = await client.aio.models.generate_content(
-        model=settings.gemini_pro_model,
-        contents=f"{JUDGE_RUBRIC}\n\n{user_prompt}",
+    response = await client.chat.completions.create(
+        model=settings.groq_pro_model,
+        messages=[
+            {"role": "system", "content": JUDGE_RUBRIC},
+            {"role": "user", "content": user_prompt}
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.0
     )
 
-    raw_text = _clean_json_response(response.text.strip())
+    raw_text = _clean_json_response(response.choices[0].message.content.strip())
     raw = json.loads(raw_text)
     return _derive_classification(raw, run_id)

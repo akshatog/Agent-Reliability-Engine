@@ -1,8 +1,8 @@
 """Extended edge-case tests for OWASP mapping (Copilot review recommendations)."""
 import re
-import pytest
-from app.schemas.scenario import FailureCategory
+
 from app.core.owasp_mapping import get_owasp_mapping
+from app.schemas.scenario import FailureCategory
 
 
 class TestOwaspMappingEdgeCases:

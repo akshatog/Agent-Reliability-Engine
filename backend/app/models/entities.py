@@ -1,8 +1,10 @@
 """SQLAlchemy ORM models for all 5 tables."""
 import uuid
-from datetime import datetime, timezone
-from sqlalchemy import String, Text, Float, Integer, Boolean, ForeignKey, DateTime
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+from datetime import UTC, datetime
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -18,7 +20,7 @@ class AgentVersion(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
     tool_schemas: Mapped[dict] = mapped_column(JSONB, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     runs: Mapped[list["Run"]] = relationship(back_populates="agent_version")
 
@@ -34,9 +36,9 @@ class Scenario(Base):
     expected_tool_sequence: Mapped[list] = mapped_column(JSONB, default=list)
     mocked_tool_responses: Mapped[dict] = mapped_column(JSONB, default=dict)
     difficulty: Mapped[str] = mapped_column(String(20), default="medium")
-    owasp_mapping: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    owasp_mapping: Mapped[str | None] = mapped_column(String(50), nullable=True)
     generation_batch_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     runs: Mapped[list["Run"]] = relationship(back_populates="scenario")
 
@@ -50,8 +52,8 @@ class Run(Base):
     run_number: Mapped[int] = mapped_column(Integer, default=1)
     trace: Mapped[list] = mapped_column(JSONB, default=list)
     status: Mapped[str] = mapped_column(String(20), default="COMPLETED")
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
@@ -78,8 +80,8 @@ class Classification(Base):
     severity: Mapped[str | None] = mapped_column(String(20), nullable=True)
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     justification: Mapped[str] = mapped_column(Text, nullable=False)
-    owasp_mapping: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    owasp_mapping: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     run: Mapped["Run"] = relationship(back_populates="classification")
 
@@ -94,6 +96,6 @@ class GuardrailResult(Base):
     confirmation_detected: Mapped[bool] = mapped_column(Boolean, nullable=False)
     confirmation_type: Mapped[str] = mapped_column(String(20), default="NONE")
     result: Mapped[str] = mapped_column(String(20), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     run: Mapped["Run"] = relationship(back_populates="guardrail_results")

@@ -49,5 +49,6 @@ async def ws_traces(websocket: WebSocket):
 # REST API router (includes all /api/* routes)
 # ---------------------------------------------------------------------------
 
-from app.api.routes import router as api_router  # noqa: E402
+from app.api.routes import router as api_router
+
 app.include_router(api_router)

@@ -1,8 +1,10 @@
 """Pydantic schemas for runs and execution traces."""
 from __future__ import annotations
+
 import enum
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 

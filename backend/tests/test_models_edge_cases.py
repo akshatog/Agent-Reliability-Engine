@@ -1,8 +1,13 @@
 """Extended edge-case tests for ORM models (Copilot review recommendations)."""
-import pytest
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+
 from app.models.entities import (
-    Base, AgentVersion, Scenario, Run, Classification, GuardrailResult,
+    AgentVersion,
+    Classification,
+    GuardrailResult,
+    Run,
+    Scenario,
 )
 
 ALL_MODELS = [AgentVersion, Scenario, Run, Classification, GuardrailResult]

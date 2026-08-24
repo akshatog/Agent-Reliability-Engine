@@ -1,7 +1,5 @@
 """Tests for the Scorecard aggregation (Module 5)."""
-import pytest
 from app.modules.scorecard import compute_scorecard
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
@@ -107,3 +105,127 @@ class TestComputeScorecard:
     def test_reliability_score_75_with_three_passes_one_fail(self):
         sc = compute_scorecard([PASS_RUN, PASS_RUN, PASS_RUN, FAIL_DA_CRIT])
         assert sc["overall_reliability_score"] == 75.0
+
+    def test_flaky_scenario_detected(self):
+        """A scenario run twice with mixed PASS/FAIL verdicts is correctly flagged."""
+        runs = [
+            {"scenario_id": "scen-1", "verdict": "PASS", "failure_category": None, "severity": None, "guardrail_result": None},
+            {"scenario_id": "scen-1", "verdict": "FAIL", "failure_category": "GOAL_DRIFT", "severity": "MEDIUM", "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        assert len(sc["flaky_scenarios"]) == 1
+        flaky = sc["flaky_scenarios"][0]
+        assert flaky["scenario_id"] == "scen-1"
+        assert flaky["pass_count"] == 1
+        assert flaky["fail_count"] == 1
+        assert flaky["total_runs"] == 2
+
+    def test_all_same_verdict_scenario_not_flaky(self):
+        """A scenario run multiple times with all-same verdicts is NOT flagged."""
+        runs = [
+            {"scenario_id": "scen-1", "verdict": "PASS", "failure_category": None, "severity": None, "guardrail_result": None},
+            {"scenario_id": "scen-1", "verdict": "PASS", "failure_category": None, "severity": None, "guardrail_result": None},
+            {"scenario_id": "scen-2", "verdict": "FAIL", "failure_category": "WRONG_TOOL", "severity": "HIGH", "guardrail_result": None},
+            {"scenario_id": "scen-2", "verdict": "FAIL", "failure_category": "WRONG_TOOL", "severity": "HIGH", "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        assert sc["flaky_scenarios"] == []
+
+    def test_single_run_scenario_not_flaky(self):
+        """A scenario run only once never appears in flaky_scenarios."""
+        runs = [
+            {"scenario_id": "scen-1", "verdict": "PASS", "failure_category": None, "severity": None, "guardrail_result": None},
+            {"scenario_id": "scen-2", "verdict": "FAIL", "failure_category": "PROMPT_INJECTION", "severity": "HIGH", "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        assert sc["flaky_scenarios"] == []
+
+    def test_empty_runs_data_returns_empty_flaky_list(self):
+        """Empty runs_data returns an empty flaky_scenarios list."""
+        sc = compute_scorecard([])
+        assert sc["flaky_scenarios"] == []
+
+
+# ---------------------------------------------------------------------------
+# severity_heatmap tests
+# ---------------------------------------------------------------------------
+
+class TestSeverityHeatmap:
+    def test_severity_heatmap_key_present(self):
+        """compute_scorecard() always returns a 'severity_heatmap' key."""
+        sc = compute_scorecard([])
+        assert "severity_heatmap" in sc
+
+    def test_heatmap_has_all_seven_categories(self):
+        """Every non-UNCATEGORIZED category appears as a row in severity_heatmap."""
+        sc = compute_scorecard([])
+        expected = {
+            "TOOL_CALL_LOOP", "HALLUCINATED_CONFIDENCE", "DESTRUCTIVE_ACTION",
+            "GOAL_DRIFT", "PROMPT_INJECTION", "WRONG_TOOL", "PREMATURE_COMPLETION",
+        }
+        assert set(sc["severity_heatmap"].keys()) == expected
+
+    def test_heatmap_row_has_all_severity_columns(self):
+        """Each heatmap row has critical / high / medium / low keys."""
+        sc = compute_scorecard([])
+        for cat, row in sc["severity_heatmap"].items():
+            assert set(row.keys()) == {"critical", "high", "medium", "low"}, \
+                f"Row for {cat} missing severity columns"
+
+    def test_heatmap_empty_runs_all_zeros(self):
+        """With no runs, every cell in the heatmap is 0."""
+        sc = compute_scorecard([])
+        for cat, row in sc["severity_heatmap"].items():
+            for sev, count in row.items():
+                assert count == 0, f"Expected 0 for {cat}/{sev}, got {count}"
+
+    def test_heatmap_counts_failures_correctly(self):
+        """A DESTRUCTIVE_ACTION/CRITICAL failure increments only that cell."""
+        runs = [
+            {"verdict": "FAIL", "failure_category": "DESTRUCTIVE_ACTION",
+             "severity": "CRITICAL", "guardrail_result": None},
+            {"verdict": "FAIL", "failure_category": "DESTRUCTIVE_ACTION",
+             "severity": "HIGH", "guardrail_result": None},
+            {"verdict": "FAIL", "failure_category": "PROMPT_INJECTION",
+             "severity": "HIGH", "guardrail_result": None},
+            {"verdict": "PASS", "failure_category": None,
+             "severity": None, "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        hm = sc["severity_heatmap"]
+        assert hm["DESTRUCTIVE_ACTION"]["critical"] == 1
+        assert hm["DESTRUCTIVE_ACTION"]["high"] == 1
+        assert hm["DESTRUCTIVE_ACTION"]["medium"] == 0
+        assert hm["PROMPT_INJECTION"]["high"] == 1
+        assert hm["PROMPT_INJECTION"]["critical"] == 0
+
+    def test_heatmap_pass_runs_not_counted(self):
+        """PASS runs do not appear in the heatmap — it counts only failures."""
+        runs = [
+            {"verdict": "PASS", "failure_category": None, "severity": None, "guardrail_result": None},
+            {"verdict": "PASS", "failure_category": None, "severity": None, "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        for row in sc["severity_heatmap"].values():
+            assert all(v == 0 for v in row.values())
+
+    def test_heatmap_unknown_category_not_in_heatmap(self):
+        """UNCATEGORIZED failures are excluded from the heatmap rows."""
+        runs = [
+            {"verdict": "FAIL", "failure_category": "UNCATEGORIZED",
+             "severity": "LOW", "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        assert "UNCATEGORIZED" not in sc["severity_heatmap"]
+
+    def test_heatmap_none_severity_not_counted(self):
+        """Failures with severity=None (edge case) don't increment any cell."""
+        runs = [
+            {"verdict": "FAIL", "failure_category": "GOAL_DRIFT",
+             "severity": None, "guardrail_result": None},
+        ]
+        sc = compute_scorecard(runs)
+        row = sc["severity_heatmap"]["GOAL_DRIFT"]
+        assert all(v == 0 for v in row.values())
+
+

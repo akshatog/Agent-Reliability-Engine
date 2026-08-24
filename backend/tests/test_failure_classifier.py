@@ -1,11 +1,15 @@
 """Tests for the Failure Mode Classifier (Module 3)."""
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch
 
-from app.modules.failure_classifier import JUDGE_RUBRIC, _derive_classification, _clean_json_response
-from app.schemas.classification import Verdict, Severity
+from app.modules.failure_classifier import (
+    JUDGE_RUBRIC,
+    _clean_json_response,
+    _derive_classification,
+)
+from app.schemas.classification import Severity, Verdict
 from app.schemas.scenario import FailureCategory
-
 
 # ---------------------------------------------------------------------------
 # JUDGE_RUBRIC tests
@@ -197,11 +201,16 @@ class TestClassifyRun:
         """classify_run should return a ClassificationCreate when LLM returns valid JSON."""
         from app.modules.failure_classifier import classify_run
 
-        mock_response = AsyncMock()
-        mock_response.text = '{"verdict": "PASS", "failure_category": null, "severity": null, "confidence": 0.95, "justification": "Agent followed safe behavior."}'
+        # Groq API shape: response.choices[0].message.content
+        mock_message = MagicMock()
+        mock_message.content = '{"verdict": "PASS", "failure_category": null, "severity": null, "confidence": 0.95, "justification": "Agent followed safe behavior."}'
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
 
         mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch("app.modules.failure_classifier._get_client", return_value=mock_client):
             result = await classify_run(
@@ -218,11 +227,15 @@ class TestClassifyRun:
         """LLM sometimes wraps JSON in markdown — must be stripped cleanly."""
         from app.modules.failure_classifier import classify_run
 
-        mock_response = AsyncMock()
-        mock_response.text = '```json\n{"verdict": "FAIL", "failure_category": "DESTRUCTIVE_ACTION", "severity": "CRITICAL", "confidence": 0.99, "justification": "Agent deleted without confirmation."}\n```'
+        mock_message = MagicMock()
+        mock_message.content = '```json\n{"verdict": "FAIL", "failure_category": "DESTRUCTIVE_ACTION", "severity": "CRITICAL", "confidence": 0.99, "justification": "Agent deleted without confirmation."}\n```'
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
 
         mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch("app.modules.failure_classifier._get_client", return_value=mock_client):
             result = await classify_run(
@@ -240,16 +253,20 @@ class TestClassifyRun:
         """If LLM returns non-JSON, classify_run should raise a ValueError."""
         from app.modules.failure_classifier import classify_run
 
-        mock_response = AsyncMock()
-        mock_response.text = "I cannot determine the verdict."
+        mock_message = MagicMock()
+        mock_message.content = "I cannot determine the verdict."
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
 
         mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        with patch("app.modules.failure_classifier._get_client", return_value=mock_client):
-            with pytest.raises((ValueError, Exception)):
-                await classify_run(
-                    trace=[],
-                    expected_safe_behavior="Do something.",
-                    run_id="00000000-0000-0000-0000-000000000003",
-                )
+        with patch("app.modules.failure_classifier._get_client", return_value=mock_client), \
+             pytest.raises((ValueError, Exception)):
+            await classify_run(
+                trace=[],
+                expected_safe_behavior="Do something.",
+                run_id="00000000-0000-0000-0000-000000000003",
+            )

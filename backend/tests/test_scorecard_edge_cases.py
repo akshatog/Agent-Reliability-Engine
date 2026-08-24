@@ -1,19 +1,18 @@
 """Edge-case tests for Scorecard (Module 5) and Wilson statistics (D5)."""
-import pytest
-from app.modules.scorecard import compute_scorecard
 from app.core.statistics import wilson_score_interval
+from app.modules.scorecard import compute_scorecard
 
 
 class TestWilsonEdgeCases:
 
     def test_all_pass_lower_bound_never_zero(self):
         """With all successes, lower bound should be > 0 (Wilson avoids naive 0)."""
-        lower, upper = wilson_score_interval(100, 100)
+        lower, _upper = wilson_score_interval(100, 100)
         assert lower > 0.0
 
     def test_all_fail_upper_bound_never_one(self):
         """With all failures, upper bound should be < 1 (Wilson avoids naive 1)."""
-        lower, upper = wilson_score_interval(0, 100)
+        _lower, upper = wilson_score_interval(0, 100)
         assert upper < 1.0
 
     def test_monotonic_with_increasing_successes(self):

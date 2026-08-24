@@ -1,9 +1,10 @@
 """Tests for Pydantic schemas and enums."""
 import pytest
-from app.schemas.scenario import FailureCategory, ScenarioCreate
-from app.schemas.classification import Severity, Verdict, ClassificationCreate
-from app.schemas.guardrail import GuardrailResultEnum, ConfirmationType
+
+from app.schemas.classification import ClassificationCreate, Severity, Verdict
+from app.schemas.guardrail import GuardrailResultEnum
 from app.schemas.run import RunStatus
+from app.schemas.scenario import FailureCategory, ScenarioCreate
 
 
 class TestEnums:
@@ -54,7 +55,7 @@ class TestScenarioSchema:
         assert scenario.owasp_mapping == "LLM06"
 
     def test_scenario_create_rejects_invalid_category(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             ScenarioCreate(
                 category="INVALID_CATEGORY",
                 setup="test", user_message="test",

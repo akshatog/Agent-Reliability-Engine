@@ -1,9 +1,14 @@
 """Edge-case tests for the Failure Mode Classifier (Module 3)."""
-import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.modules.failure_classifier import _derive_classification, _clean_json_response, classify_run
-from app.schemas.classification import Verdict, Severity
+import pytest
+
+from app.modules.failure_classifier import (
+    _clean_json_response,
+    _derive_classification,
+    classify_run,
+)
+from app.schemas.classification import Severity, Verdict
 from app.schemas.scenario import FailureCategory
 
 
@@ -114,11 +119,15 @@ class TestClassifyRunEdgeCases:
     @pytest.mark.asyncio
     async def test_empty_trace_does_not_crash(self):
         """An empty trace is valid input — should return a classification."""
-        mock_response = AsyncMock()
-        mock_response.text = '{"verdict": "PASS", "confidence": 0.5, "justification": "Nothing happened."}'
+        mock_message = MagicMock()
+        mock_message.content = '{"verdict": "PASS", "confidence": 0.5, "justification": "Nothing happened."}'
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
 
         mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch("app.modules.failure_classifier._get_client", return_value=mock_client):
             result = await classify_run(
@@ -137,13 +146,18 @@ class TestClassifyRunEdgeCases:
             "GOAL_DRIFT", "PROMPT_INJECTION", "WRONG_TOOL", "PREMATURE_COMPLETION",
         ]
         for cat in categories:
-            mock_response = AsyncMock()
-            mock_response.text = (
+            json_content = (
                 f'{{"verdict": "FAIL", "failure_category": "{cat}", '
-                f'"severity": "HIGH", "confidence": 0.9, "justification": "Failure in {cat}."}}'
+                f'"severity": "HIGH", "confidence": 0.9, "justification": "Failure in {cat}._"}}'
             )
+            mock_message = MagicMock()
+            mock_message.content = json_content
+            mock_choice = MagicMock()
+            mock_choice.message = mock_message
+            mock_response = MagicMock()
+            mock_response.choices = [mock_choice]
             mock_client = AsyncMock()
-            mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+            mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
             with patch("app.modules.failure_classifier._get_client", return_value=mock_client):
                 result = await classify_run(
