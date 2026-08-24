@@ -222,22 +222,22 @@ export default function ScorecardPage() {
   }, [liveTrend, mockTrend])
 
   // ── Versions for tabs ──────────────────────────────────────────────────────
-  const versions = liveTrend && liveTrend.length > 0
-    ? liveTrend.map((t) => t.name)
-    : trend.map((t) => t.version)
+  const versions: { id: string; name: string }[] = liveTrend && liveTrend.length > 0
+    ? liveTrend.map((t) => ({ id: t.agent_version_id, name: t.name }))
+    : trend.map((t, i) => ({ id: `mock-${i}`, name: t.version }))
 
-  const [version, setVersion] = useState(versions[versions.length - 1])
+  const [version, setVersion] = useState(versions[versions.length - 1]?.name ?? '')
   const [metrics, setMetrics] = useState({ reliability: true, guardrail: true, confidence: false })
   const [expanded, setExpanded] = useState(true)
   const [filter, setFilter] = useState('All')
-  const [a, setA] = useState(versions[versions.length - 1])
-  const [b, setB] = useState(versions[versions.length - 3] ?? versions[0])
+  const [a, setA] = useState(versions[versions.length - 1]?.name ?? '')
+  const [b, setB] = useState(versions[versions.length - 3]?.name ?? versions[0]?.name ?? '')
 
   // Reset version tabs when agent changes
   useEffect(() => {
-    setVersion(versions[versions.length - 1])
-    setA(versions[versions.length - 1])
-    setB(versions[versions.length - 3] ?? versions[0])
+    setVersion(versions[versions.length - 1]?.name ?? '')
+    setA(versions[versions.length - 1]?.name ?? '')
+    setB(versions[versions.length - 3]?.name ?? versions[0]?.name ?? '')
   }, [agentId, versions.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Convert severity_heatmap dict to HeatmapRow[] ─────────────────────────
@@ -319,7 +319,7 @@ export default function ScorecardPage() {
 
       <nav className="version-tabs" aria-label="Agent versions">
         {versions.map(v => (
-          <button key={v} className={version === v ? 'active' : ''} onClick={() => setVersion(v)}>{v}</button>
+          <button key={v.id} className={version === v.name ? 'active' : ''} onClick={() => setVersion(v.name)}>{v.name}</button>
         ))}
       </nav>
 
@@ -446,11 +446,11 @@ export default function ScorecardPage() {
           <ChartCard title="VERSION COMPARE">
             <div className="selects">
               <label>VERSION A<select value={a} onChange={e=>setA(e.target.value)}>
-                {versions.map(x=><option key={x}>{x}</option>)}
+                {versions.map(x=><option key={x.id} value={x.name}>{x.name}</option>)}
               </select></label>
               <span>↔</span>
               <label>VERSION B<select value={b} onChange={e=>setB(e.target.value)}>
-                {versions.map(x=><option key={x}>{x}</option>)}
+                {versions.map(x=><option key={x.id} value={x.name}>{x.name}</option>)}
               </select></label>
             </div>
             <div className="delta-list">

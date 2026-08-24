@@ -60,13 +60,14 @@ const AgentContext = createContext<AgentContextType>({
 
 export function AgentProvider({ children }: { children: ReactNode }) {
   // ── Legacy state ────────────────────────────────────────────────────────
-  const [agentId, setAgentIdState] = useState<AgentId>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('are_agent_id') as AgentId
-      if (saved && (saved === 'devops' || saved === 'support')) return saved
+  const [agentId, setAgentIdState] = useState<AgentId>('devops')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('are_agent_id') as AgentId
+    if (saved && (saved === 'devops' || saved === 'support')) {
+      setAgentIdState(saved)
     }
-    return 'devops'
-  })
+  }, [])
 
   const setAgentId = (id: AgentId) => {
     setAgentIdState(id)
@@ -80,12 +81,14 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   // Active version UUID: persisted in localStorage under a separate key
   // so it survives page reloads without polluting the legacy key.
-  const [activeVersionId, setActiveVersionIdState] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('are_version_id') ?? null
+  const [activeVersionId, setActiveVersionIdState] = useState<string | null>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('are_version_id')
+    if (saved) {
+      setActiveVersionIdState(saved)
     }
-    return null
-  })
+  }, [])
 
   const [scorecards, setScorecards] = useState<Record<string, ScorecardData>>({})
 

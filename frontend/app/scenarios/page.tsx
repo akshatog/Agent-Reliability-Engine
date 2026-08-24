@@ -95,20 +95,23 @@ export default function ScenariosPage() {
     setGenerating(true)
     setGenerateError(null)
     try {
-      if (activeVersionId) {
-        // Real backend generate
-        const cat = category === 'ALL' ? 'DESTRUCTIVE_ACTION' : category
-        const generated = await generateScenarios(cat, count, activeVersionId)
+      const cat = category === 'ALL' ? 'DESTRUCTIVE_ACTION' : category
+      const generated = await generateScenarios(cat, count, activeVersionId ?? '')
+      if (generated.length === 0) {
+        setGenerateError('Backend returned 0 scenarios — check server logs and restart backend if needed')
+      } else {
+        const offset = Date.now() // unique offset to prevent key collisions
         setLiveScenarios((prev) => [
           ...(prev ?? []),
-          ...mapScenarios(generated).map((s, i) => ({ ...s, id: (prev?.length ?? 0) + i + 1 })),
+          ...mapScenarios(generated).map((s, i) => ({ ...s, id: offset + i })),
         ])
-      } else {
-        // Fallback: just flash the button (no backend)
-        await new Promise((r) => setTimeout(r, 1500))
       }
     } catch (err) {
-      setGenerateError(err instanceof ApiError ? `Error ${err.status}` : 'Generate failed')
+      setGenerateError(
+        err instanceof ApiError
+          ? `Backend error ${err.status}: ${err.message}`
+          : `Generate failed — is the backend running? (${(err as Error).message})`
+      )
     } finally {
       setGenerating(false)
     }
