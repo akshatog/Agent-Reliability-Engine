@@ -50,3 +50,7 @@ frontend/next-env.d.ts
 
 # Screenshots / audit artifacts (not source code)
 audit-screenshots/
+
+# Agent IDE and Workflow folders
+.specify/
+.superpowers/
