@@ -34,7 +34,7 @@ jobs:
 
       - name: Run pytest
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python -m pytest tests/ -v --tb=short
 
