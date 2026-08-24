@@ -21,6 +21,7 @@ import { useAgent } from '@/lib/agent-context'
 import { listRuns, suggestRemediation, verifyRemediation, ApiError } from '@/lib/api'
 import type { RemediationSuggestion, VerificationResult } from '@/lib/api-types'
 import { REMEDIATION_PATCHES } from '@/lib/mock-data'
+import { PageErrorBoundary } from '@/components/page-error-boundary'
 
 const SEVERITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
   CRITICAL: { color: '#F43F5E', bg: 'rgba(244,63,94,0.08)', border: 'rgba(244,63,94,0.2)' },
@@ -348,7 +349,16 @@ function SkeletonCard() {
 }
 
 // ── Page ───────────────────────────────────────────────────
+
 export default function RemediationPage() {
+  return (
+    <PageErrorBoundary pageName="Remediation Engine">
+      <RemediationPageInner />
+    </PageErrorBoundary>
+  )
+}
+
+function RemediationPageInner() {
   const { agentId, agent, activeVersionId } = useAgent()
 
   const [suggestions, setSuggestions] = useState<RemediationSuggestion[]>([])

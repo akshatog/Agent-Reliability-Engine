@@ -9,6 +9,7 @@ import type { RedTeamScenario } from '@/lib/mock-data'
 import { redTeamChat, ApiError } from '@/lib/api'
 import { mapRedTeamResponse } from '@/lib/red-team-mapper'
 import type { RedTeamDisplayItem } from '@/lib/api-types'
+import { PageErrorBoundary } from '@/components/page-error-boundary'
 
 type Tab = 'console' | 'scenarios' | 'library'
 
@@ -268,6 +269,14 @@ function Theater({ running, selected }: { running: boolean; selected: RedTeamDis
 }
 
 export default function RedTeamPage() {
+  return (
+    <PageErrorBoundary pageName="Red Team">
+      <RedTeamPageInner />
+    </PageErrorBoundary>
+  )
+}
+
+function RedTeamPageInner() {
   const { agentId, agent, activeVersionId } = useAgent()
   const mockScenarios = RED_TEAM_SCENARIOS[agentId]
   const chips = SUGGESTION_CHIPS[agentId]

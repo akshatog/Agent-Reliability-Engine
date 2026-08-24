@@ -216,12 +216,16 @@ async def verify_remediation(
     )
 
     # Re-execute the original scenario with the patched config
-    # For tool_schema patches, pass the patched schema as tool_definitions
-    patched_tool_definitions = (
-        suggestion.after  # type: ignore[arg-type]
-        if suggestion.patch_type == "tool_schema"
-        else []  # system_prompt patches use the default tool definitions
-    )
+    # For tool_schema patches: suggestion.after is a JSON *string* — parse it to list[dict]
+    if suggestion.patch_type == "tool_schema":
+        try:
+            patched_tool_definitions = json.loads(suggestion.after)
+            if not isinstance(patched_tool_definitions, list):
+                patched_tool_definitions = []
+        except (json.JSONDecodeError, TypeError):
+            patched_tool_definitions = []
+    else:
+        patched_tool_definitions = []  # system_prompt patches use default tool definitions
     run_result = await execute_scenario(
         scenario={
             "user_message": original_scenario.get("user_message", ""),

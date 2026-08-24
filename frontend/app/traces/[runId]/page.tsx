@@ -30,6 +30,8 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
+import { CodeBlock } from '@/components/ui/code-block'
+import { PageErrorBoundary } from '@/components/page-error-boundary'
 
 // ── WebSocket URL ─────────────────────────────────────────────────────────────
 const WS_URL = BASE_URL.replace(/^http/, 'ws') + '/ws/traces'
@@ -314,6 +316,14 @@ function VerdictPanel({ open, setOpen, classification, classifying }: VerdictPan
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TraceViewerPage() {
+  return (
+    <PageErrorBoundary pageName="Trace Viewer">
+      <TraceViewerPageInner />
+    </PageErrorBoundary>
+  )
+}
+
+function TraceViewerPageInner() {
   const params = useParams()
   const runId = (params.runId as string) ?? ''
   const { agent } = useAgent()

@@ -24,6 +24,20 @@ export function mapRedTeamResponse(
   resp: RedTeamChatResponse,
   input: string,
 ): RedTeamDisplayItem {
+  // Runtime type validation
+  if (!resp || typeof resp !== 'object') {
+    throw new TypeError('Invalid response: Expected an object')
+  }
+  if (!resp.scenario || !resp.classification || !resp.run_id) {
+    throw new TypeError('Invalid response: Missing scenario, classification, or run_id')
+  }
+  if (!Array.isArray(resp.guardrail_results)) {
+    throw new TypeError('Invalid response: guardrail_results must be an array')
+  }
+  if (typeof resp.classification.verdict !== 'string' || typeof resp.classification.confidence !== 'number') {
+    throw new TypeError('Invalid response: classification fields are malformed')
+  }
+
   const { scenario, classification, guardrail_results, run_id } = resp
 
   return {
