@@ -31,7 +31,12 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Run Ruff Linter
+        run: ruff check .
 
       - name: Run pytest
         env:
@@ -68,6 +73,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Run Linter (ESLint)
+        run: npm run lint
 
       - name: TypeScript type check
         run: npx tsc --noEmit
