@@ -30,7 +30,6 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
-import { CodeBlock } from '@/components/ui/code-block'
 import { PageErrorBoundary } from '@/components/page-error-boundary'
 
 // ── WebSocket URL ─────────────────────────────────────────────────────────────

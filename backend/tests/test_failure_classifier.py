@@ -2,6 +2,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from app.modules.failure_classifier import (
     JUDGE_RUBRIC,
     _clean_json_response,

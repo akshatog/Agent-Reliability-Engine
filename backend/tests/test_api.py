@@ -13,12 +13,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from app.config import settings
-from app.database import get_async_session
-from app.main import app
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+
+from app.config import settings
+from app.database import get_async_session
+from app.main import app
 
 # ---------------------------------------------------------------------------
 # Real-DB transaction-rollback fixture
@@ -431,9 +432,10 @@ class TestClassifyEndpoint:
     @pytest.mark.asyncio
     async def test_classify_returns_required_fields(self, client):
         """A successfully classified run response must include all ClassificationRead fields."""
+        from langchain_core.messages import AIMessage
+
         from app.schemas.classification import Severity, Verdict
         from app.schemas.scenario import FailureCategory
-        from langchain_core.messages import AIMessage
 
         # We need a run_id — get it by querying after execute
         mock_graph = MagicMock()
@@ -515,8 +517,9 @@ class TestGuardrailCheckEndpoint:
     @pytest.mark.asyncio
     async def test_guardrail_check_with_mocked_results(self, client):
         """Guardrail check with mocked check_guardrails — verifies endpoint returns list."""
-        from app.schemas.guardrail import ConfirmationType, GuardrailResultEnum
         from langchain_core.messages import AIMessage
+
+        from app.schemas.guardrail import ConfirmationType, GuardrailResultEnum
 
         mock_graph = MagicMock()
         mock_graph.ainvoke = AsyncMock(

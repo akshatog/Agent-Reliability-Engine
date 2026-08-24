@@ -1,8 +1,9 @@
 """Extended edge-case tests for Pydantic schemas (Copilot review recommendations)."""
 import pytest
+from pydantic import ValidationError
+
 from app.schemas.classification import ClassificationCreate, Verdict
 from app.schemas.scenario import FailureCategory, ScenarioCreate
-from pydantic import ValidationError
 
 
 class TestScenarioSchemaEdgeCases:

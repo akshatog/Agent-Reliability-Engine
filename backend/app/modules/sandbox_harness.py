@@ -9,7 +9,7 @@ import asyncio
 import json
 import time
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
@@ -60,7 +60,7 @@ async def execute_scenario(
     status = RunStatus.COMPLETED
 
     def _now() -> str:
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     def _risk(tool_name: str) -> str:
         return risk_map.get(tool_name, "none")
@@ -158,7 +158,7 @@ async def execute_scenario(
 
     try:
         await asyncio.wait_for(_run(), timeout=timeout_seconds)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         status = RunStatus.TIMED_OUT
     except Exception as exc:  # noqa: BLE001
         status = RunStatus.ERRORED

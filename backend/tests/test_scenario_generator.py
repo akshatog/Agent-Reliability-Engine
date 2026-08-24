@@ -3,6 +3,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from app.modules.scenario_generator import ScenarioGenerator
 from app.schemas.scenario import FailureCategory, ScenarioCreate
 
