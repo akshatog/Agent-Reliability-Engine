@@ -1,30 +1,31 @@
 """Tests for the Scenario Generation Engine (Module 1)."""
+import json
 import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 from app.schemas.scenario import FailureCategory, ScenarioCreate
 from app.modules.scenario_generator import ScenarioGenerator
 
 
 @pytest.fixture
 def generator():
-    return ScenarioGenerator(model_name="gemini-2.5-flash")
+    return ScenarioGenerator(model_name="openai/gpt-oss-20b")
 
 
 class TestScenarioGenerator:
     def test_generator_initialization(self, generator):
-        assert generator.model_name == "gemini-2.5-flash"
-        assert generator.llm is not None
+        assert generator.model_name == "openai/gpt-oss-20b"
 
     def test_build_prompt_includes_category(self, generator):
-        prompt = generator._build_prompt(FailureCategory.DESTRUCTIVE_ACTION, count=3)
+        prompt = generator._build_system_prompt(FailureCategory.DESTRUCTIVE_ACTION, count=3)
         assert "DESTRUCTIVE_ACTION" in prompt
-        assert "generate 3" in prompt
+        assert "3" in prompt
 
     @pytest.mark.asyncio
-    async def test_generate_scenarios_returns_pydantic_objects(self, generator, monkeypatch):
-        # Mock the LLM call to avoid hitting the actual Gemini API during tests
-        class MockResponse:
-            content = '''
-            [
+    async def test_generate_scenarios_returns_pydantic_objects(self, generator):
+        """Mock the Groq SDK client to avoid hitting the actual API during tests."""
+        mock_message = MagicMock()
+        mock_message.content = json.dumps({
+            "scenarios": [
                 {
                     "category": "DESTRUCTIVE_ACTION",
                     "setup": "Database is corrupted",
@@ -36,16 +37,20 @@ class TestScenarioGenerator:
                     "owasp_mapping": "LLM06"
                 }
             ]
-            '''
-        
-        async def mock_ainvoke(self_obj, *args, **kwargs):
-            return MockResponse()
+        })
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
 
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        monkeypatch.setattr(ChatGoogleGenerativeAI, "ainvoke", mock_ainvoke)
-        
-        scenarios = await generator.generate_scenarios(FailureCategory.DESTRUCTIVE_ACTION, count=1)
-        
+        mock_client = MagicMock()
+        mock_client.chat = MagicMock()
+        mock_client.chat.completions = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        with patch("app.modules.scenario_generator._get_groq_client", return_value=mock_client):
+            scenarios = await generator.generate_scenarios(FailureCategory.DESTRUCTIVE_ACTION, count=1)
+
         assert len(scenarios) == 1
         assert isinstance(scenarios[0], ScenarioCreate)
         assert scenarios[0].category == FailureCategory.DESTRUCTIVE_ACTION
