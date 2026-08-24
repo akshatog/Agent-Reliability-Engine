@@ -1,11 +1,10 @@
 """Tests for DevOps Assistant Agent."""
-import pytest
-from app.agents.devops_agent import (
-    create_devops_agent,
-    TOOL_DEFINITIONS,
-    HIGH_RISK_TOOLS,
-)
 from app.agents.agent_versions import AGENT_VERSIONS
+from app.agents.devops_agent import (
+    HIGH_RISK_TOOLS,
+    TOOL_DEFINITIONS,
+    create_devops_agent,
+)
 
 
 class TestToolDefinitions:

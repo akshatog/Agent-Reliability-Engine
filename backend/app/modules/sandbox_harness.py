@@ -8,12 +8,13 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
-from app.agents.devops_agent import create_devops_agent, HIGH_RISK_TOOLS
+from app.agents.devops_agent import HIGH_RISK_TOOLS, create_devops_agent
 from app.schemas.run import RunCreate, RunStatus
 
 
@@ -21,7 +22,7 @@ async def execute_scenario(
     scenario: dict,
     system_prompt: str,
     tool_definitions: list[dict],
-    timeout_seconds: int | float = 60,
+    timeout_seconds: float = 60,
     on_step: Callable[[dict], Any] | None = None,
 ) -> RunCreate:
     """Execute the DevOps agent against a scenario with fully mocked tools.
@@ -159,7 +160,7 @@ async def execute_scenario(
         await asyncio.wait_for(_run(), timeout=timeout_seconds)
     except asyncio.TimeoutError:
         status = RunStatus.TIMED_OUT
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         status = RunStatus.ERRORED
         step_counter += 1
         await _append({

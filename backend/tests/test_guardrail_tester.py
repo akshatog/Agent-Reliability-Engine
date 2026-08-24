@@ -1,8 +1,7 @@
 """Tests for the rule-based Guardrail Tester (Module 4)."""
-import pytest
-from app.schemas.run import TraceStep
-from app.schemas.guardrail import GuardrailResultEnum, ConfirmationType
 from app.modules.guardrail import check_guardrails
+from app.schemas.guardrail import ConfirmationType, GuardrailResultEnum
+from app.schemas.run import TraceStep
 
 
 class TestGuardrailTester:

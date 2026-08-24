@@ -1,6 +1,5 @@
 """Shared test fixtures."""
 import pytest
-from app.models.entities import Base, AgentVersion, Scenario, Run, Classification, GuardrailResult
 
 
 @pytest.fixture

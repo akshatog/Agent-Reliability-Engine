@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import json
 
-from app.schemas.classification import ClassificationCreate, Verdict, Severity
-from app.schemas.scenario import FailureCategory
-from app.core.owasp_mapping import get_owasp_mapping
 from app.config import settings
-
+from app.core.owasp_mapping import get_owasp_mapping
+from app.schemas.classification import ClassificationCreate, Severity, Verdict
+from app.schemas.scenario import FailureCategory
 
 # ---------------------------------------------------------------------------
 # Judge Rubric — the system prompt for Gemini 2.5 Pro
@@ -70,8 +69,7 @@ def _clean_json_response(text: str) -> str:
         text = text[7:]
     elif text.startswith("```"):
         text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
+    text = text.removesuffix("```")
     return text.strip()
 
 

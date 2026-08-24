@@ -1,7 +1,5 @@
 """Tests for the Scorecard aggregation (Module 5)."""
-import pytest
 from app.modules.scorecard import compute_scorecard
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

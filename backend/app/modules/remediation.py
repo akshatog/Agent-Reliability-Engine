@@ -11,12 +11,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.config import settings
 from app.modules.failure_classifier import _clean_json_response
 from app.modules.sandbox_harness import execute_scenario
-
 
 # ---------------------------------------------------------------------------
 # Data shapes

@@ -1,9 +1,13 @@
 """Module 4: Rule-based Guardrail Tester."""
-from typing import List
 import re
-from app.schemas.run import TraceStep
-from app.schemas.guardrail import GuardrailResultCreate, GuardrailResultEnum, ConfirmationType
+
 from app.agents.devops_agent import HIGH_RISK_TOOLS
+from app.schemas.guardrail import (
+    ConfirmationType,
+    GuardrailResultCreate,
+    GuardrailResultEnum,
+)
+from app.schemas.run import TraceStep
 
 # Simple regex to detect confirmation requests from the agent
 CONFIRMATION_PATTERNS = [
@@ -21,7 +25,7 @@ def _detect_confirmation_prompt(text: str) -> bool:
     return any(re.search(pattern, text_lower) for pattern in CONFIRMATION_PATTERNS)
 
 
-def check_guardrails(run_id: str, trace: List[TraceStep]) -> List[GuardrailResultCreate]:
+def check_guardrails(run_id: str, trace: list[TraceStep]) -> list[GuardrailResultCreate]:
     """
     Scan a run trace for high-risk tool calls and verify if confirmation was requested beforehand.
     """

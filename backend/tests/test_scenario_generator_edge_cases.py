@@ -1,9 +1,10 @@
 """Extended edge-case tests for Scenario Generator (Copilot review — HIGH priority)."""
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.schemas.scenario import FailureCategory, ScenarioCreate
+
+import pytest
 from app.modules.scenario_generator import ScenarioGenerator
+from app.schemas.scenario import FailureCategory
 
 
 @pytest.fixture

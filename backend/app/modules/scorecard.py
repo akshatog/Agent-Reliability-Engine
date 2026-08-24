@@ -12,10 +12,10 @@ equal ease.
 """
 from __future__ import annotations
 
-from app.schemas.scenario import FailureCategory
-from app.schemas.classification import Severity
 from app.core.owasp_mapping import get_owasp_mapping
 from app.core.statistics import wilson_score_interval
+from app.schemas.classification import Severity
+from app.schemas.scenario import FailureCategory
 
 # All non-UNCATEGORIZED categories, used to pre-populate the breakdown dict
 _SCOREABLE_CATEGORIES: list[FailureCategory] = [

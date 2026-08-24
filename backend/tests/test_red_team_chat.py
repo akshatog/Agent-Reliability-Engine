@@ -7,18 +7,16 @@ API calls in the test suite.
 from __future__ import annotations
 
 import json
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import NullPool
-
+import pytest
+import pytest_asyncio
 from app.config import settings
-from app.main import app
 from app.database import get_async_session
-
+from app.main import app
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 # ---------------------------------------------------------------------------
 # DB transaction-rollback fixture (matches test_api.py pattern)
@@ -89,7 +87,7 @@ class TestRedTeamChatModule:
     async def test_valid_attack_desc_returns_scenario_create(self):
         """A well-formed attack description returns a valid ScenarioCreate."""
         from app.modules.red_team_chat import nl_to_scenario
-        from app.schemas.scenario import ScenarioCreate, FailureCategory
+        from app.schemas.scenario import FailureCategory, ScenarioCreate
 
         mock_llm = _make_mock_llm(VALID_SCENARIO_JSON)
 
@@ -204,11 +202,11 @@ class TestRedTeamChatEndpoint:
     @pytest.mark.asyncio
     async def test_full_chain_returns_all_required_fields(self, client):
         """Full chain: scenario → run → classification → guardrail results in one response."""
-        from langchain_core.messages import AIMessage
-        from app.schemas.classification import Verdict, Severity
-        from app.schemas.scenario import FailureCategory
         from app.modules.failure_classifier import ClassificationCreate
-        from app.schemas.guardrail import GuardrailResultEnum, ConfirmationType
+        from app.schemas.classification import Severity, Verdict
+        from app.schemas.guardrail import ConfirmationType, GuardrailResultEnum
+        from app.schemas.scenario import FailureCategory
+        from langchain_core.messages import AIMessage
 
         # Create an agent version with tool_schemas containing delete_deployment
         av_resp = await client.post("/api/agent-versions", json={
@@ -285,9 +283,9 @@ class TestRedTeamChatEndpoint:
     @pytest.mark.asyncio
     async def test_scenario_stored_in_db_after_successful_chat(self, client):
         """After a successful red-team-chat, the scenario should be persisted."""
-        from langchain_core.messages import AIMessage
-        from app.schemas.classification import Verdict
         from app.modules.failure_classifier import ClassificationCreate
+        from app.schemas.classification import Verdict
+        from langchain_core.messages import AIMessage
 
         av_resp = await client.post("/api/agent-versions", json={
             "name": "Store Scenario Agent",

@@ -7,18 +7,17 @@ Covers:
 - A bad suggestion honestly reports FAIL (not forced PASS)
 - UUID validation matches existing endpoint conventions
 """
-import pytest
 import json
 import uuid
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from app.modules.remediation import (
+    RemediationSuggestion,
+    _derive_suggestion,
     suggest_remediation,
     verify_remediation,
-    _derive_suggestion,
-    RemediationSuggestion,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures — minimal run/classification data shapes
@@ -249,15 +248,15 @@ class TestSuggestRemediation:
         mock_client = AsyncMock()
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        with patch("app.modules.remediation._get_client", return_value=mock_client):
-            with pytest.raises((ValueError, Exception)):
-                await suggest_remediation(
-                    run_id=SAMPLE_RUN_ID,
-                    trace=SAMPLE_TRACE,
-                    classification=SAMPLE_CLASSIFICATION,
-                    system_prompt=SAMPLE_SYSTEM_PROMPT,
-                    tool_schemas={},
-                )
+        with patch("app.modules.remediation._get_client", return_value=mock_client), \
+             pytest.raises((ValueError, Exception)):
+            await suggest_remediation(
+                run_id=SAMPLE_RUN_ID,
+                trace=SAMPLE_TRACE,
+                classification=SAMPLE_CLASSIFICATION,
+                system_prompt=SAMPLE_SYSTEM_PROMPT,
+                tool_schemas={},
+            )
 
     @pytest.mark.asyncio
     async def test_suggest_uses_flash_model(self):

@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import json
 import logging
-from pydantic import ValidationError
-from langchain_groq import ChatGroq
 
-from app.schemas.scenario import ScenarioCreate
+from langchain_groq import ChatGroq
+from pydantic import ValidationError
+
 from app.config import settings
+from app.schemas.scenario import ScenarioCreate
 
 logger = logging.getLogger(__name__)
 
@@ -99,8 +100,7 @@ class RedTeamChatConverter:
             raw = raw[7:]
         elif raw.startswith("```"):
             raw = raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
+        raw = raw.removesuffix("```")
         return raw.strip()
 
     async def convert(self, message: str, tool_schemas: dict) -> ScenarioCreate:

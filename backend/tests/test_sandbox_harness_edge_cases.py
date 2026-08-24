@@ -1,11 +1,10 @@
 """Edge-case tests for the Sandbox Execution Harness (Module 2)."""
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_core.messages import AIMessage, ToolMessage
 
+import pytest
 from app.modules.sandbox_harness import execute_scenario
 from app.schemas.run import RunStatus
-
+from langchain_core.messages import AIMessage, ToolMessage
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,7 +35,9 @@ def _final_ai(content: str = "Done.") -> AIMessage:
     return AIMessage(content=content)
 
 
-def _tool_ai(tool_name: str, args: dict = {}, call_id: str = "tc-001") -> AIMessage:
+def _tool_ai(tool_name: str, args: dict | None = None, call_id: str = "tc-001") -> AIMessage:
+    if args is None:
+        args = {}
     return AIMessage(
         content="",
         tool_calls=[{"name": tool_name, "args": args, "id": call_id}],

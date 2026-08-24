@@ -1,9 +1,10 @@
 """Tests for the Scenario Generation Engine (Module 1)."""
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.schemas.scenario import FailureCategory, ScenarioCreate
+
+import pytest
 from app.modules.scenario_generator import ScenarioGenerator
+from app.schemas.scenario import FailureCategory, ScenarioCreate
 
 
 @pytest.fixture

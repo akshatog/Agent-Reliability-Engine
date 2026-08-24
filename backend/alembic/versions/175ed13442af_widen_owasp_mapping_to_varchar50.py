@@ -5,14 +5,15 @@ Revises: 70297a726c69
 Create Date: 2026-08-23 20:42:22.045719
 
 """
-from typing import Sequence, Union
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = '175ed13442af'
-down_revision: Union[str, Sequence[str], None] = '70297a726c69'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '70297a726c69'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

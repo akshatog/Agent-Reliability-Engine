@@ -1,8 +1,10 @@
 """SQLAlchemy ORM models for all 5 tables."""
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Text, Float, Integer, Boolean, ForeignKey, DateTime
-from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
+
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 

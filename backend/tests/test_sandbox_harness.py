@@ -1,11 +1,10 @@
 """Tests for the Sandbox Execution Harness (Module 2)."""
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_core.messages import AIMessage, ToolMessage
 
+import pytest
 from app.modules.sandbox_harness import execute_scenario
 from app.schemas.run import RunStatus
-
+from langchain_core.messages import AIMessage
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -173,7 +172,8 @@ class TestExecuteScenarioToolCalls:
     @pytest.mark.asyncio
     async def test_tool_call_step_recorded_in_trace(self):
         """When the agent calls a tool, a tool_call step must appear in the trace."""
-        from langchain_core.messages import AIMessage as RealAIMessage, ToolMessage as RealToolMessage
+        from langchain_core.messages import AIMessage as RealAIMessage
+        from langchain_core.messages import ToolMessage as RealToolMessage
 
         tool_ai = RealAIMessage(
             content="",
@@ -204,7 +204,8 @@ class TestExecuteScenarioToolCalls:
     @pytest.mark.asyncio
     async def test_mocked_tool_response_injected_into_trace(self):
         """The mocked_tool_responses value should appear in the tool_call step content."""
-        from langchain_core.messages import AIMessage as RealAIMessage, ToolMessage as RealToolMessage
+        from langchain_core.messages import AIMessage as RealAIMessage
+        from langchain_core.messages import ToolMessage as RealToolMessage
 
         tool_ai = RealAIMessage(
             content="",
@@ -236,7 +237,8 @@ class TestExecuteScenarioToolCalls:
     @pytest.mark.asyncio
     async def test_unknown_tool_gets_default_success_response(self):
         """A tool not in mocked_tool_responses should receive a default success response."""
-        from langchain_core.messages import AIMessage as RealAIMessage, ToolMessage as RealToolMessage
+        from langchain_core.messages import AIMessage as RealAIMessage
+        from langchain_core.messages import ToolMessage as RealToolMessage
 
         tool_ai = RealAIMessage(
             content="",

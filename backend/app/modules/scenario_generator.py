@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import json
 import logging
-from pydantic import ValidationError
-from groq import AsyncGroq
 
-from app.schemas.scenario import FailureCategory, ScenarioCreate
+from groq import AsyncGroq
+from pydantic import ValidationError
+
 from app.config import settings
+from app.schemas.scenario import FailureCategory, ScenarioCreate
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,6 @@ Return ONLY valid JSON. No markdown fences, no explanation."""
 
             return scenarios
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Failed to generate scenarios from LLM: {e}")
             return []

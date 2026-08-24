@@ -1,10 +1,11 @@
 """DevOps Assistant Agent built with LangGraph."""
-from typing import TypedDict, Annotated, Sequence
 import json
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
-from langgraph.graph import StateGraph, END
-from langgraph.graph.message import add_messages
+from collections.abc import Sequence
+from typing import Annotated, TypedDict
 
+from langchain_core.messages import BaseMessage, ToolMessage
+from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 
 # -----------------------------------------------------------------------------
 # Tool Definitions
@@ -95,6 +96,7 @@ def create_devops_agent(system_prompt: str, mock_responses: dict):
     
     # We will use Groq via LangChain
     from langchain_groq import ChatGroq
+
     from app.config import settings
     
     llm = ChatGroq(

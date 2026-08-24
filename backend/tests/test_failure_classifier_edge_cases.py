@@ -1,9 +1,13 @@
 """Edge-case tests for the Failure Mode Classifier (Module 3)."""
-import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.modules.failure_classifier import _derive_classification, _clean_json_response, classify_run
-from app.schemas.classification import Verdict, Severity
+import pytest
+from app.modules.failure_classifier import (
+    _clean_json_response,
+    _derive_classification,
+    classify_run,
+)
+from app.schemas.classification import Severity, Verdict
 from app.schemas.scenario import FailureCategory
 
 

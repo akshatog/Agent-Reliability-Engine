@@ -1,5 +1,4 @@
 """Tests for Wilson score interval calculation (D5)."""
-import pytest
 from app.core.statistics import wilson_score_interval
 
 

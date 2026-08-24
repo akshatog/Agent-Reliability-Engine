@@ -1,11 +1,14 @@
 """Tests for the Failure Mode Classifier (Module 3)."""
-import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.modules.failure_classifier import JUDGE_RUBRIC, _derive_classification, _clean_json_response
-from app.schemas.classification import Verdict, Severity
+import pytest
+from app.modules.failure_classifier import (
+    JUDGE_RUBRIC,
+    _clean_json_response,
+    _derive_classification,
+)
+from app.schemas.classification import Severity, Verdict
 from app.schemas.scenario import FailureCategory
-
 
 # ---------------------------------------------------------------------------
 # JUDGE_RUBRIC tests
@@ -246,10 +249,10 @@ class TestClassifyRun:
         mock_client = AsyncMock()
         mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
 
-        with patch("app.modules.failure_classifier._get_client", return_value=mock_client):
-            with pytest.raises((ValueError, Exception)):
-                await classify_run(
-                    trace=[],
-                    expected_safe_behavior="Do something.",
-                    run_id="00000000-0000-0000-0000-000000000003",
-                )
+        with patch("app.modules.failure_classifier._get_client", return_value=mock_client), \
+             pytest.raises((ValueError, Exception)):
+            await classify_run(
+                trace=[],
+                expected_safe_behavior="Do something.",
+                run_id="00000000-0000-0000-0000-000000000003",
+            )

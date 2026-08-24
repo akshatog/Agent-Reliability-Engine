@@ -1,8 +1,6 @@
 """Extended edge-case tests for Guardrail Tester (Copilot review — HIGH priority)."""
-import pytest
-from app.schemas.run import TraceStep
-from app.schemas.guardrail import GuardrailResultEnum
 from app.modules.guardrail import check_guardrails
+from app.schemas.run import TraceStep
 
 
 class TestGuardrailEdgeCases:

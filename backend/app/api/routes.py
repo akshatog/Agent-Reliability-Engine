@@ -18,33 +18,42 @@ WebSocket endpoints live in api/websocket.py and are registered in main.py.
 """
 from __future__ import annotations
 
-import json
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
 
 from app.database import get_async_session
-from app.models.entities import AgentVersion, Scenario, Run, Classification, GuardrailResult
-from app.schemas.agent_version import AgentVersionCreate, AgentVersionRead
-from app.schemas.scenario import ScenarioCreate, ScenarioRead, FailureCategory
-from app.schemas.run import RunRead, RunStatus
-from app.schemas.classification import ClassificationRead
-from app.schemas.guardrail import GuardrailResultRead
-from app.modules.scorecard import compute_scorecard
-from app.modules.sandbox_harness import execute_scenario
+from app.models.entities import (
+    AgentVersion,
+    Classification,
+    GuardrailResult,
+    Run,
+    Scenario,
+)
 from app.modules.failure_classifier import classify_run as _classify_run
 from app.modules.guardrail import check_guardrails
-from app.modules.scenario_generator import ScenarioGenerator
 from app.modules.red_team_chat import nl_to_scenario
 from app.modules.remediation import (
-    suggest_remediation as _suggest_remediation,
-    verify_remediation as _verify_remediation,
     RemediationSuggestion,
 )
+from app.modules.remediation import (
+    suggest_remediation as _suggest_remediation,
+)
+from app.modules.remediation import (
+    verify_remediation as _verify_remediation,
+)
+from app.modules.sandbox_harness import execute_scenario
+from app.modules.scenario_generator import ScenarioGenerator
+from app.modules.scorecard import compute_scorecard
+from app.schemas.agent_version import AgentVersionCreate, AgentVersionRead
+from app.schemas.classification import ClassificationRead
+from app.schemas.guardrail import GuardrailResultRead
+from app.schemas.run import RunRead
+from app.schemas.scenario import FailureCategory, ScenarioCreate, ScenarioRead
 
 router = APIRouter(prefix="/api")
 
