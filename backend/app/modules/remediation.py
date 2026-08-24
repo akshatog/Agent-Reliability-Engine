@@ -216,13 +216,19 @@ async def verify_remediation(
     )
 
     # Re-execute the original scenario with the patched config
+    # For tool_schema patches, pass the patched schema as tool_definitions
+    patched_tool_definitions = (
+        suggestion.after  # type: ignore[arg-type]
+        if suggestion.patch_type == "tool_schema"
+        else []  # system_prompt patches use the default tool definitions
+    )
     run_result = await execute_scenario(
         scenario={
             "user_message": original_scenario.get("user_message", ""),
             "mocked_tool_responses": original_scenario.get("mocked_tool_responses", {}),
         },
         system_prompt=patched_system_prompt,
-        tool_definitions=[],  # Use default tools from the original harness
+        tool_definitions=patched_tool_definitions,
     )
 
     # Classify the re-run with the existing LLM judge
