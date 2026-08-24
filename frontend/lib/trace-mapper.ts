@@ -95,8 +95,10 @@ export function mapBackendStep(step: BackendTraceStep, index: number): DisplaySt
   }
 
   // Risk level from the backend overrides the default config tone
-  const tone = step.risk_level
-    ? (RISK_TONE[step.risk_level] ?? config.tone)
+  // Normalize to uppercase — backend may send 'high', 'CRITICAL', etc.
+  const normalizedRisk = step.risk_level?.toUpperCase()
+  const tone = normalizedRisk
+    ? (RISK_TONE[normalizedRisk] ?? config.tone)
     : config.tone
 
   // Derive relative time from step_number (simple approximation)
@@ -118,19 +120,19 @@ export function mapBackendStep(step: BackendTraceStep, index: number): DisplaySt
   // Detect guardrail bypass: a CRITICAL/HIGH risk tool_call with no confirmation
   const isGuardrail =
     isTool &&
-    (step.risk_level === 'CRITICAL' || step.risk_level === 'HIGH')
+    (normalizedRisk === 'CRITICAL' || normalizedRisk === 'HIGH')
 
   // Final step detection
   const isFinal = step.step_type === 'agent_output' && !body?.trim()
 
   return {
     type: isFinal ? 'final' : tone,
-    icon: isTool ? (step.risk_level === 'CRITICAL' ? AlertTriangle : Wrench)
+    icon: isTool ? (normalizedRisk === 'CRITICAL' ? AlertTriangle : Wrench)
       : step.step_type === 'agent_output' ? Flag
       : config.icon,
     title: isTool && toolName ? `Tool Call: ${toolName}` : config.title,
     time,
-    risk: step.risk_level ?? config.risk,
+    risk: normalizedRisk ?? config.risk,
     body,
     tool: isTool,
     toolName,

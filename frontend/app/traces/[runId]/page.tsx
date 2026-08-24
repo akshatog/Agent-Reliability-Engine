@@ -32,7 +32,7 @@ import {
 } from 'lucide-react'
 
 // ── WebSocket URL ─────────────────────────────────────────────────────────────
-const WS_URL = BASE_URL.replace(/^http/, 'ws') + '/ws/trace'
+const WS_URL = BASE_URL.replace(/^http/, 'ws') + '/ws/traces'
 
 // ── Sub-components (unchanged UI, real data injected) ─────────────────────────
 
@@ -64,7 +64,7 @@ function Intel({ open, setOpen, run, classification }: IntelProps) {
       .filter((s) => s.step_type === 'tool_call')
       .map((s) => ({
         name: (s.content?.tool_name as string) ?? 'unknown',
-        risk: s.risk_level ?? 'LOW',
+        risk: (s.risk_level ?? 'LOW').toUpperCase(),
         response: JSON.stringify(s.content ?? {}, null, 2),
       }))
   }, [run])

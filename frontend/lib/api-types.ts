@@ -57,6 +57,8 @@ export interface RunRead {
   trace: BackendTraceStep[]
   status: string
   duration_ms: number | null
+  started_at: string
+  completed_at: string | null
   created_at: string
 }
 
@@ -151,7 +153,7 @@ export interface ScorecardData {
 /** Single entry in GET /api/scorecard/trend response */
 export interface ScorecardTrendEntry {
   agent_version_id: string
-  name: string
+  agent_version_name: string
   created_at: string
   overall_reliability_score: number
   guardrail_hold_rate: number

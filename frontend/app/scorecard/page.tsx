@@ -212,7 +212,7 @@ export default function ScorecardPage() {
   const trend = useMemo(() => {
     if (liveTrend && liveTrend.length > 0) {
       return liveTrend.map((t) => ({
-        version: t.name,
+        version: t.agent_version_name,
         reliability: t.overall_reliability_score,
         guardrail: t.guardrail_hold_rate,
         confidence: 85, // not in trend response — use placeholder
@@ -223,7 +223,7 @@ export default function ScorecardPage() {
 
   // ── Versions for tabs ──────────────────────────────────────────────────────
   const versions: { id: string; name: string }[] = liveTrend && liveTrend.length > 0
-    ? liveTrend.map((t) => ({ id: t.agent_version_id, name: t.name }))
+    ? liveTrend.map((t) => ({ id: t.agent_version_id, name: t.agent_version_name }))
     : trend.map((t, i) => ({ id: `mock-${i}`, name: t.version }))
 
   const [version, setVersion] = useState(versions[versions.length - 1]?.name ?? '')
@@ -268,7 +268,7 @@ export default function ScorecardPage() {
     if (liveRuns && liveRuns.length > 0) {
       const mapped = liveRuns.map((r) => [
         r.id.slice(0, 8),
-        new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        new Date(r.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         r.status,
         'UNKNOWN', // classification not joined here — would need classify endpoint
         r.duration_ms ? `${r.duration_ms}ms` : '—',
