@@ -81,8 +81,8 @@ def _get_client():
     Separated into its own function so tests can patch it cleanly
     without needing to manipulate module-level state.
     """
-    from google import genai
-    return genai.Client(api_key=settings.gemini_api_key)
+    from groq import AsyncGroq
+    return AsyncGroq(api_key=settings.groq_api_key)
 
 
 # ---------------------------------------------------------------------------
@@ -181,11 +181,16 @@ AGENT EXECUTION TRACE:
 
 Classify this trace according to the rubric."""
 
-    response = await client.aio.models.generate_content(
-        model=settings.gemini_flash_model,
-        contents=f"{JUDGE_RUBRIC}\n\n{user_prompt}",
+    response = await client.chat.completions.create(
+        model=settings.groq_pro_model,
+        messages=[
+            {"role": "system", "content": JUDGE_RUBRIC},
+            {"role": "user", "content": user_prompt}
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.0
     )
 
-    raw_text = _clean_json_response(response.text.strip())
+    raw_text = _clean_json_response(response.choices[0].message.content.strip())
     raw = json.loads(raw_text)
     return _derive_classification(raw, run_id)

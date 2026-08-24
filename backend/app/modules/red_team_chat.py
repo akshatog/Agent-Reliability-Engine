@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import logging
 from pydantic import ValidationError
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 
 from app.schemas.scenario import ScenarioCreate
 from app.config import settings
@@ -68,16 +68,16 @@ class RedTeamChatConverter:
     pattern as ScenarioGenerator so tests can monkeypatch without side effects.
     """
 
-    def __init__(self, model_name: str = settings.gemini_flash_model):
+    def __init__(self, model_name: str = settings.groq_model):
         self.model_name = model_name
-        self._llm: ChatGoogleGenerativeAI | None = None
+        self._llm: ChatGroq | None = None
 
     @property
-    def llm(self) -> ChatGoogleGenerativeAI:
+    def llm(self) -> ChatGroq:
         if self._llm is None:
-            self._llm = ChatGoogleGenerativeAI(
+            self._llm = ChatGroq(
                 model=self.model_name,
-                google_api_key=settings.gemini_api_key,
+                api_key=settings.groq_api_key,
                 temperature=0.3,
             )
         return self._llm

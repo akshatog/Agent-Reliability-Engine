@@ -10,7 +10,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)
 ![LangGraph](https://img.shields.io/badge/LangGraph-0.3+-blueviolet)
-![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash%20%7C%20Pro-orange?logo=google)
+![Groq](https://img.shields.io/badge/Groq-Llama%203%20%7C%20Mixtral-f55036?logo=groq)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -54,7 +54,7 @@ This engine solves a critical problem: *how do you know if your AI agent will be
 │                                                             │
 │  1. GENERATE ──► 2. EXECUTE ──► 3. GUARD ──► 4. CLASSIFY  │
 │                                                             │
-│  Gemini Flash      Sandbox        Rule-based   Gemini Pro  │
+│  Groq (Fast)       Sandbox        Rule-based   Groq (Pro)  │
 │  generates         runs agent     checks for   judges the  │
 │  adversarial       against        high-risk    trace and   │
 │  scenarios         mocked tools   tool calls   classifies  │
@@ -84,7 +84,7 @@ The Next.js 15 dashboard is fully wired to the backend API — all 7 routes show
 | `/scenarios` | Adversarial scenario catalog + live generate button calling `POST /api/scenarios/generate` |
 | `/traces/[runId]` | Live trace viewer with WebSocket streaming, intel panel, verdict + OWASP mapping |
 | `/scorecard` | Reliability trend chart, severity heatmap, OWASP risk profile, Wilson CI display |
-| `/red-team` | Natural language red team chat → live `POST /api/red-team-chat` → real Gemini verdict |
+| `/red-team` | Natural language red team chat → live `POST /api/red-team-chat` → real LLM verdict |
 | `/remediation` | AI-suggested patches with before/after diff viewer |
 | `/report` | Full reliability report with embedded SVG badge |
 
@@ -119,7 +119,7 @@ The Next.js 15 dashboard is fully wired to the backend API — all 7 routes show
 │  │  │  │ Module 1        │   │ Module 2         │                    │   │  │
 │  │  │  │ SCENARIO GEN    │   │ SANDBOX HARNESS  │                    │   │  │
 │  │  │  │                 │   │                  │                    │   │  │
-│  │  │  │ Gemini Flash +  │   │ LangGraph Agent  │                    │   │  │
+│  │  │  │ Groq Models  +  │   │ LangGraph Agent  │                    │   │  │
 │  │  │  │ 7 category      │   │ Mocked Tools     │                    │   │  │
 │  │  │  │ prompt templates│   │ Trace Capture    │                    │   │  │
 │  │  │  │ Structured JSON │   │ Timeout (60s)    │                    │   │  │
@@ -129,7 +129,7 @@ The Next.js 15 dashboard is fully wired to the backend API — all 7 routes show
 │  │  │  │ Module 4        │   │ Module 3          │                   │   │  │
 │  │  │  │ GUARDRAIL TESTER│   │ FAILURE CLASSIFIER│                   │   │  │
 │  │  │  │                 │   │                   │                   │   │  │
-│  │  │  │ Rule-based      │   │ Gemini Pro Judge  │                   │   │  │
+│  │  │  │ Rule-based      │   │ Groq LLM Judge    │                   │   │  │
 │  │  │  │ High-risk tool  │   │ Anti-sycophancy   │                   │   │  │
 │  │  │  │ detection       │   │ Rubric + OWASP    │                   │   │  │
 │  │  │  │ HELD/BYPASSED   │   │ LLM Top 10 Map    │                   │   │  │
@@ -167,11 +167,11 @@ The Next.js 15 dashboard is fully wired to the backend API — all 7 routes show
 ### Module 1 — Scenario Generation Engine
 **File:** `backend/app/modules/scenario_generator.py`
 
-Uses **Gemini 2.5 Flash** to automatically generate adversarial test scenarios across 7 failure categories. Each scenario includes a user message, expected safe behavior, mocked tool responses, and OWASP mapping.
+Uses **Groq** to automatically generate adversarial test scenarios across 7 failure categories. Each scenario includes a user message, expected safe behavior, mocked tool responses, and OWASP mapping.
 
-- **Lazy initialization** via `@property` — no `GEMINI_API_KEY` needed at import time (CI-friendly)
+- **Lazy initialization** via `@property` — no `GROQ_API_KEY` needed at import time (CI-friendly)
 - **7 category-specific prompt templates** — each tuned to elicit a specific failure mode
-- **Structured JSON output** — Pydantic-validated at the source
+- **Structured JSON output** — Pydantic-validated at the source with explicit `response_format={"type": "json_object"}`
 
 ### Module 2 — Sandbox Execution Harness
 **File:** `backend/app/modules/sandbox_harness.py`
@@ -185,11 +185,11 @@ Executes the DevOps agent in a fully controlled environment with mocked tool res
 ### Module 3 — Failure Mode Classifier (LLM-as-Judge)
 **File:** `backend/app/modules/failure_classifier.py`
 
-Uses **Gemini 2.5 Pro** as a strict LLM judge to classify agent execution traces. The anti-sycophancy rubric explicitly instructs the model to err on the side of flagging failures.
+Uses **Groq (Pro models)** as a strict LLM judge to classify agent execution traces. The anti-sycophancy rubric explicitly instructs the model to err on the side of flagging failures.
 
 - **7-category taxonomy** with detailed negative examples in the rubric
 - **Pure `_derive_classification()`** function — fully testable without any LLM mocks
-- **Patchable `_get_client()`** — dependency-injectable Gemini client for clean testing
+- **Patchable `_get_client()`** — dependency-injectable Groq client for clean testing
 
 ### Module 4 — Guardrail Tester (Rule-Based)
 **File:** `backend/app/modules/guardrail.py`
@@ -220,7 +220,7 @@ Aggregates run results into a rich reliability report.
 | **D1** | OWASP LLM Top 10 mapping | `core/owasp_mapping.py` — every FAIL auto-mapped at classify time |
 | **D2** | Auto-generated report + badge | `GET /api/report/{id}` · `GET /api/badge/{id}.svg` — dynamic SVG with letter grade |
 | **D3** | Severity heatmap | `compute_scorecard()` returns `severity_heatmap: Record<category, Record<severity, count>>` |
-| **D4** | Natural Language Red Team Chat | `POST /api/red-team-chat` — free-text → Gemini → validated scenario → execute → classify |
+| **D4** | Natural Language Red Team Chat | `POST /api/red-team-chat` — free-text → LLM → validated scenario → execute → classify |
 | **D5** | Flaky scenario detection | `compute_scorecard()` returns `flaky_scenarios` list with pass/fail counts |
 
 ---
@@ -254,7 +254,7 @@ Base URL: `http://localhost:8000`
 ### Scenarios
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/scenarios/generate` | Generate adversarial scenarios (Gemini Flash) |
+| `POST` | `/api/scenarios/generate` | Generate adversarial scenarios (Groq) |
 | `GET` | `/api/scenarios` | List all stored scenarios |
 
 ### Runs
@@ -267,7 +267,7 @@ Base URL: `http://localhost:8000`
 ### Classification & Guardrails
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/classify/{run_id}` | Classify a run with Gemini 2.5 Pro judge |
+| `POST` | `/api/classify/{run_id}` | Classify a run with Groq LLM judge |
 | `POST` | `/api/guardrail/check/{run_id}` | Run rule-based guardrail check |
 
 ### Red Team Chat (D4)
@@ -281,6 +281,12 @@ Base URL: `http://localhost:8000`
 | `GET` | `/api/scorecard/{agent_version_id}` | Full scorecard (with heatmap + flaky + OWASP) |
 | `GET` | `/api/scorecard/trend` | Reliability trend across all versions |
 | `GET` | `/api/scorecard/compare?version_a=...&version_b=...` | Side-by-side comparison |
+
+### Remediation
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/remediation/suggest/{run_id}` | Generate system prompt/schema patches for failures |
+| `POST` | `/api/remediation/verify/{suggestion_id}` | Sandbox-verify the AI-suggested patch for safety |
 
 ### Reports & Badges (D2)
 | Method | Endpoint | Description |
@@ -308,9 +314,7 @@ Base URL: `http://localhost:8000`
 | **Data Viz** | Recharts | Trend charts, pie, bar, radar |
 | **API Framework** | FastAPI 0.115+ | Async REST + WebSocket |
 | **Agent Framework** | LangGraph 0.3+ | Stateful agent execution |
-| **LLM — Scenario Gen** | Gemini 2.5 Flash | Fast adversarial scenario generation |
-| **LLM — Judge** | Gemini 2.5 Pro | High-quality failure classification |
-| **LLM — Red Team** | Gemini 2.5 Flash | NL → structured scenario (D4) |
+| **LLM Inference** | Groq | Ultra-fast adversarial generation & evaluation |
 | **Database** | PostgreSQL (Neon) | Persistent storage via asyncpg |
 | **ORM** | SQLAlchemy 2.0 (async) | DB models + async session management |
 | **Migrations** | Alembic | Versioned schema migrations |
@@ -338,9 +342,9 @@ agent-reliability-engine/
 │   │   ├── models/
 │   │   │   └── entities.py              # SQLAlchemy ORM (5 tables)
 │   │   ├── modules/
-│   │   │   ├── scenario_generator.py    # Module 1: Gemini Flash scenario generation
+│   │   │   ├── scenario_generator.py    # Module 1: Groq scenario generation
 │   │   │   ├── sandbox_harness.py       # Module 2: Sandboxed agent execution + trace
-│   │   │   ├── failure_classifier.py    # Module 3: Gemini Pro LLM-as-judge
+│   │   │   ├── failure_classifier.py    # Module 3: Groq LLM-as-judge
 │   │   │   ├── guardrail.py             # Module 4: Rule-based guardrail checker
 │   │   │   ├── scorecard.py             # Module 5: Reliability scorecard + D3/D5
 │   │   │   └── red_team_chat.py         # D4: NL red team chat orchestration
@@ -416,7 +420,7 @@ agent-reliability-engine/
 - Python 3.11+
 - Node.js 18+
 - PostgreSQL database (e.g., [Neon.tech](https://neon.tech) — free tier works)
-- Google Gemini API Key ([Get one here](https://aistudio.google.com/app/apikey))
+- Groq API Key ([Get one here](https://console.groq.com/keys))
 
 ### 1. Clone the Repository
 
@@ -440,12 +444,12 @@ Create a `.env` file in the `backend/` directory:
 # Database — must use asyncpg driver
 DATABASE_URL=postgresql+asyncpg://user:password@host/dbname?ssl=require
 
-# Gemini API
-GEMINI_API_KEY=your_gemini_api_key_here
+# Groq API
+GROQ_API_KEY=gsk_your_api_key_here
 
 # Model selection (defaults)
-GEMINI_FLASH_MODEL=gemini-2.5-flash-preview-05-20
-GEMINI_PRO_MODEL=gemini-2.5-pro-preview-06-05
+GROQ_MODEL=openai/gpt-oss-20b
+GROQ_PRO_MODEL=openai/gpt-oss-120b
 ```
 
 ### 4. Run Database Migrations
@@ -524,8 +528,8 @@ python -m pytest tests/test_api.py -v
 | D5: Flaky scenario detection | `compute_scorecard()` | ✅ Done | 7 tests |
 | **Total backend** | | **✅ 253/253 passing** | |
 | Task 9: Next.js Dashboard | Frontend (7 routes) | ✅ Done | Build clean |
-| Task 10: Full API wiring | Frontend ↔ Backend | 🔄 In progress | — |
-| Task 11: Integration + Demo | End-to-end | 🔲 Pending | — |
+| Task 10: Full API wiring | Frontend ↔ Backend | ✅ Done | — |
+| Task 11: Integration + Demo | End-to-end | ✅ Done | — |
 
 ---
 
@@ -537,8 +541,8 @@ The naive Wald interval (`p ± z√(p(1-p)/n)`) breaks at boundary proportions �
 ### Why Separate `_derive_classification()` from `classify_run()`?
 `_derive_classification()` is a pure function (no I/O) that handles all post-processing of the LLM's raw JSON. This means 20+ of the 40 classifier tests run in <1ms without any network calls or mocking.
 
-### Why `_get_client()` Instead of Module-Level Gemini Client?
-Module-level initialization crashes any test suite that imports `failure_classifier` without a `GEMINI_API_KEY`. By isolating client creation in `_get_client()`, tests can `patch("app.modules.failure_classifier._get_client")` cleanly.
+### Why `_get_client()` Instead of Module-Level Groq Client?
+Module-level initialization crashes any test suite that imports `failure_classifier` without a `GROQ_API_KEY`. By isolating client creation in `_get_client()`, tests can `patch("app.modules.failure_classifier._get_client")` cleanly.
 
 ### Why Transaction Rollback for API Tests?
 Using `SAVEPOINT`-based rollback means API tests run against the *exact same schema, constraints, and indexes* as production — catching real FK constraint violations that in-memory SQLite would silently ignore.

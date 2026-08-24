@@ -101,8 +101,8 @@ def _get_client():
     Separated so tests can patch cleanly via
     patch("app.modules.remediation._get_client").
     """
-    from google import genai
-    return genai.Client(api_key=settings.gemini_api_key)
+    from groq import AsyncGroq
+    return AsyncGroq(api_key=settings.groq_api_key)
 
 
 def _derive_suggestion(raw: dict, run_id: str) -> RemediationSuggestion:
@@ -173,12 +173,14 @@ async def suggest_remediation(
         trace_excerpt=trace_excerpt,
     )
 
-    response = await client.aio.models.generate_content(
-        model=settings.gemini_flash_model,
-        contents=prompt,
+    response = await client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"},
+        temperature=0.7
     )
 
-    raw_text = _clean_json_response(response.text.strip())
+    raw_text = _clean_json_response(response.choices[0].message.content.strip())
     raw = json.loads(raw_text)
     return _derive_suggestion(raw, run_id)
 
