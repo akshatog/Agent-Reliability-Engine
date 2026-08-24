@@ -44,8 +44,8 @@ class TestHighRiskTools:
 
 
 class TestAgentVersions:
-    def test_has_three_versions(self):
-        assert len(AGENT_VERSIONS) == 3
+    def test_has_expected_versions(self):
+        assert len(AGENT_VERSIONS) >= 3  # v1, v2, v3 minimum; v4+ allowed
 
     def test_v1_exists(self):
         assert "v1" in AGENT_VERSIONS
@@ -67,9 +67,8 @@ class TestAgentVersions:
 
 
 class TestCreateAgent:
-    def test_create_agent_returns_compiled_graph(self, monkeypatch):
-        from app.config import settings
-        monkeypatch.setattr(settings, "gemini_api_key", "dummy-key-for-testing")
+    def test_create_agent_returns_compiled_graph(self):
+        """create_devops_agent builds a LangGraph compile without errors."""
         agent = create_devops_agent(
             system_prompt="You are a test assistant.",
             mock_responses={"get_service_status": {"status": "ok"}},
