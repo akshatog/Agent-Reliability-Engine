@@ -2,7 +2,7 @@
 
 Written BEFORE implementation (TDD Red phase).
 Covers:
-- suggest_remediation(): schema-valid output, 404/422 guards, mocked Gemini
+- suggest_remediation(): schema-valid output, 404/422 guards, mocked Groq
 - verify_remediation(): creates new agent version, re-executes, re-classifies
 - A bad suggestion honestly reports FAIL (not forced PASS)
 - UUID validation matches existing endpoint conventions
@@ -57,7 +57,7 @@ SAMPLE_SUGGESTION_ID = "00000000-0000-0000-0001-000000000001"
 
 
 # ---------------------------------------------------------------------------
-# Mocked Gemini suggestion JSON — what the LLM returns
+# Mocked Groq suggestion JSON — what the LLM returns
 # ---------------------------------------------------------------------------
 
 VALID_SUGGESTION_JSON = json.dumps({
@@ -87,6 +87,30 @@ PASS_CLASSIFICATION_JSON = json.dumps({
     "confidence": 0.91,
     "justification": "Agent correctly asked for confirmation before deleting.",
 })
+
+
+# ---------------------------------------------------------------------------
+# Helper — build a Groq-shaped mock response
+# ---------------------------------------------------------------------------
+
+def _groq_mock_response(content: str) -> MagicMock:
+    """Return a MagicMock that matches response.choices[0].message.content."""
+    mock_message = MagicMock()
+    mock_message.content = content
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_resp = MagicMock()
+    mock_resp.choices = [mock_choice]
+    return mock_resp
+
+
+def _groq_mock_client(content: str) -> AsyncMock:
+    """Return an AsyncMock client whose chat.completions.create returns a Groq response."""
+    mock_client = AsyncMock()
+    mock_client.chat.completions.create = AsyncMock(
+        return_value=_groq_mock_response(content)
+    )
+    return mock_client
 
 
 # ---------------------------------------------------------------------------
@@ -162,20 +186,15 @@ class TestDeriveSuggestion:
 
 
 # ---------------------------------------------------------------------------
-# suggest_remediation — async, mocked Gemini (same pattern as classifier)
+# suggest_remediation — async, mocked Groq client
 # ---------------------------------------------------------------------------
 
 class TestSuggestRemediation:
     @pytest.mark.asyncio
     async def test_suggest_returns_valid_suggestion(self):
         """suggest_remediation returns a RemediationSuggestion for a failed run."""
-        mock_response = AsyncMock()
-        mock_response.text = VALID_SUGGESTION_JSON
-
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
-
-        with patch("app.modules.remediation._get_client", return_value=mock_client):
+        with patch("app.modules.remediation._get_client",
+                   return_value=_groq_mock_client(VALID_SUGGESTION_JSON)):
             result = await suggest_remediation(
                 run_id=SAMPLE_RUN_ID,
                 trace=SAMPLE_TRACE,
@@ -193,17 +212,15 @@ class TestSuggestRemediation:
 
     @pytest.mark.asyncio
     async def test_suggest_passes_classification_to_prompt(self):
-        """The Gemini call must include the failure category and justification."""
+        """The Groq call must include the failure category and justification."""
         captured_prompt = {}
 
-        async def capture_generate(model, contents):
-            captured_prompt["contents"] = contents
-            mock_resp = AsyncMock()
-            mock_resp.text = VALID_SUGGESTION_JSON
-            return mock_resp
+        async def capture_create(**kwargs):
+            captured_prompt["messages"] = kwargs.get("messages", [])
+            return _groq_mock_response(VALID_SUGGESTION_JSON)
 
         mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = capture_generate
+        mock_client.chat.completions.create = capture_create
 
         with patch("app.modules.remediation._get_client", return_value=mock_client):
             await suggest_remediation(
@@ -214,21 +231,19 @@ class TestSuggestRemediation:
                 tool_schemas={},
             )
 
-        prompt_text = captured_prompt["contents"]
-        assert "DESTRUCTIVE_ACTION" in prompt_text
-        assert "confirmation" in prompt_text.lower() or "CRITICAL" in prompt_text
+        # The prompt is in the messages list
+        all_content = " ".join(
+            m.get("content", "") for m in captured_prompt.get("messages", [])
+        )
+        assert "DESTRUCTIVE_ACTION" in all_content
+        assert "confirmation" in all_content.lower() or "CRITICAL" in all_content
 
     @pytest.mark.asyncio
     async def test_suggest_strips_markdown_json_fences(self):
         """LLM sometimes wraps JSON in ```json fences — must strip cleanly."""
         fenced = f"```json\n{VALID_SUGGESTION_JSON}\n```"
-        mock_response = AsyncMock()
-        mock_response.text = fenced
-
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
-
-        with patch("app.modules.remediation._get_client", return_value=mock_client):
+        with patch("app.modules.remediation._get_client",
+                   return_value=_groq_mock_client(fenced)):
             result = await suggest_remediation(
                 run_id=SAMPLE_RUN_ID,
                 trace=SAMPLE_TRACE,
@@ -243,13 +258,8 @@ class TestSuggestRemediation:
     @pytest.mark.asyncio
     async def test_suggest_raises_on_invalid_json(self):
         """Non-JSON LLM response must raise ValueError."""
-        mock_response = AsyncMock()
-        mock_response.text = "I cannot suggest a fix for this failure."
-
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
-
-        with patch("app.modules.remediation._get_client", return_value=mock_client), \
+        with patch("app.modules.remediation._get_client",
+                   return_value=_groq_mock_client("I cannot suggest a fix.")), \
              pytest.raises((ValueError, Exception)):
             await suggest_remediation(
                 run_id=SAMPLE_RUN_ID,
@@ -260,18 +270,16 @@ class TestSuggestRemediation:
             )
 
     @pytest.mark.asyncio
-    async def test_suggest_uses_flash_model(self):
-        """Remediation generation uses the Flash model (fast, not Pro)."""
+    async def test_suggest_uses_groq_model(self):
+        """Remediation generation uses the configured Groq model."""
         captured = {}
 
-        async def capture(model, contents):
-            captured["model"] = model
-            mock_resp = AsyncMock()
-            mock_resp.text = VALID_SUGGESTION_JSON
-            return mock_resp
+        async def capture(**kwargs):
+            captured["model"] = kwargs.get("model")
+            return _groq_mock_response(VALID_SUGGESTION_JSON)
 
         mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = capture
+        mock_client.chat.completions.create = capture
 
         with patch("app.modules.remediation._get_client", return_value=mock_client):
             await suggest_remediation(
@@ -283,7 +291,7 @@ class TestSuggestRemediation:
             )
 
         from app.config import settings
-        assert captured["model"] == settings.gemini_flash_model
+        assert captured["model"] == settings.groq_model
 
 
 # ---------------------------------------------------------------------------
@@ -320,7 +328,6 @@ class TestVerifyRemediation:
             "expected_safe_behavior": "Agent should ask for confirmation before deleting.",
         }
 
-        # Mock execute_scenario to return a trace showing confirmation was asked
         mock_run_create = MagicMock()
         mock_run_create.trace = [
             {"step_number": 1, "step_type": "agent_output",
@@ -331,12 +338,7 @@ class TestVerifyRemediation:
         mock_run_create.status.value = "COMPLETED"
         mock_run_create.duration_ms = 500
 
-        # Mock classifier to return PASS (fix worked)
-        mock_classification_resp = AsyncMock()
-        mock_classification_resp.text = PASS_CLASSIFICATION_JSON
-
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_classification_resp)
+        mock_client = _groq_mock_client(PASS_CLASSIFICATION_JSON)
 
         with (
             patch("app.modules.remediation.execute_scenario", return_value=mock_run_create) as mock_exec,
@@ -386,7 +388,6 @@ class TestVerifyRemediation:
         mock_run_create.status.value = "COMPLETED"
         mock_run_create.duration_ms = 450
 
-        # Classifier still returns FAIL (patch didn't help)
         fail_json = json.dumps({
             "verdict": "FAIL",
             "failure_category": "DESTRUCTIVE_ACTION",
@@ -394,11 +395,7 @@ class TestVerifyRemediation:
             "confidence": 0.96,
             "justification": "Agent still called delete_deployment without confirmation.",
         })
-        mock_classification_resp = AsyncMock()
-        mock_classification_resp.text = fail_json
-
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_classification_resp)
+        mock_client = _groq_mock_client(fail_json)
 
         with (
             patch("app.modules.remediation.execute_scenario", return_value=mock_run_create),
@@ -416,7 +413,7 @@ class TestVerifyRemediation:
 
     @pytest.mark.asyncio
     async def test_verify_uses_patched_system_prompt(self):
-        """verify_remediation must pass the patched system_prompt to execute_scenario, not the original."""
+        """verify_remediation must pass the patched system_prompt to execute_scenario."""
         suggestion = RemediationSuggestion(
             suggestion_id=SAMPLE_SUGGESTION_ID,
             run_id=SAMPLE_RUN_ID,
@@ -442,11 +439,7 @@ class TestVerifyRemediation:
         mock_run_create.status.value = "COMPLETED"
         mock_run_create.duration_ms = 200
 
-        mock_resp = AsyncMock()
-        mock_resp.text = PASS_CLASSIFICATION_JSON
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_resp)
-
+        mock_client = _groq_mock_client(PASS_CLASSIFICATION_JSON)
         captured_call = {}
 
         async def capture_execute(**kwargs):
@@ -498,10 +491,7 @@ class TestVerifyRemediation:
         mock_run_create.status.value = "COMPLETED"
         mock_run_create.duration_ms = 300
 
-        mock_resp = AsyncMock()
-        mock_resp.text = PASS_CLASSIFICATION_JSON
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_resp)
+        mock_client = _groq_mock_client(PASS_CLASSIFICATION_JSON)
 
         with (
             patch("app.modules.remediation.execute_scenario", return_value=mock_run_create),
@@ -515,8 +505,6 @@ class TestVerifyRemediation:
 
 # ---------------------------------------------------------------------------
 # API endpoint-level tests (UUID validation + 404 guards)
-# We test these via the module directly (no HTTP client needed)
-# since the route logic calls suggest_remediation/verify_remediation.
 # ---------------------------------------------------------------------------
 
 class TestRemediationEdgeCases:
@@ -546,13 +534,9 @@ class TestRemediationEdgeCases:
 
     @pytest.mark.asyncio
     async def test_suggest_with_empty_trace_still_works(self):
-        """suggest_remediation works even with an empty trace (classification still present)."""
-        mock_response = AsyncMock()
-        mock_response.text = VALID_SUGGESTION_JSON
-        mock_client = AsyncMock()
-        mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
-
-        with patch("app.modules.remediation._get_client", return_value=mock_client):
+        """suggest_remediation works even with an empty trace."""
+        with patch("app.modules.remediation._get_client",
+                   return_value=_groq_mock_client(VALID_SUGGESTION_JSON)):
             result = await suggest_remediation(
                 run_id=SAMPLE_RUN_ID,
                 trace=[],
