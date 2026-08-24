@@ -2,7 +2,7 @@
 
 # 🛡️ Agent Reliability Engine
 
-### *Adversarial CI/CD for Autonomous AI Agents*
+### *Continuous Integration for AI Agents*
 
 [![CI](https://github.com/akshatog/Agent-Reliability-Engine/actions/workflows/ci.yml/badge.svg)](https://github.com/akshatog/Agent-Reliability-Engine/actions/workflows/ci.yml)
 ![Tests](https://img.shields.io/badge/tests-253%20passing-brightgreen)
@@ -10,43 +10,51 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=nextdotjs)
 ![LangGraph](https://img.shields.io/badge/LangGraph-0.3+-blueviolet)
-![Groq](https://img.shields.io/badge/Groq-Llama%203%20%7C%20Mixtral-f55036?logo=groq)
+![Groq](https://img.shields.io/badge/Groq-Powered-f55036?logo=groq)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Built for OOSC 4.0 Hackathon (Problem Statement 4) · IIIT Allahabad**
+**Automatically break your AI agent before your users do.**
 
-*Automatically generate adversarial scenarios, execute agents in a sandboxed environment, classify failures using an LLM judge, and track reliability trends — with a live Next.js dashboard, full OWASP LLM Top 10 mapping, and natural language red-team chat.*
+*Generate adversarial scenarios → Execute in a sandboxed harness → Classify failures by root cause → Track reliability across versions → Auto-suggest patches — all from a live dashboard.*
 
 </div>
 
 ---
 
+## 🤔 Why Does This Exist?
+
+Traditional software testing doesn't transfer well to AI agents. An agent can pass every unit test and still:
+
+- Execute a destructive tool call without asking the user first
+- Follow a prompt injection embedded in a tool response
+- Hallucinate a confident answer to mask a reasoning gap
+- Loop on the same tool call 12 times when the response is ambiguous
+- Complete early and return an empty response because the task "seemed done"
+
+These are **failure modes, not bugs** — and they require a fundamentally different approach to test. The Agent Reliability Engine is that approach: a CI/CD framework that generates adversarial inputs, runs them against your agent in a controlled sandbox, and classifies failures with a calibrated LLM judge.
+
+---
+
 ## 📋 Table of Contents
 
-- [What Is This?](#-what-is-this)
+- [How It Works](#-how-it-works)
 - [Live Dashboard](#-live-dashboard)
 - [Architecture](#-architecture)
-- [Module Breakdown](#-module-breakdown)
-- [Differentiators](#-differentiators-d1d5)
+- [Module Deep-Dive](#-module-deep-dive)
+- [Design Decisions](#-design-decisions)
 - [OWASP LLM Top 10 Coverage](#-owasp-llm-top-10-coverage)
 - [API Reference](#-api-reference)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Setup & Installation](#-setup--installation)
 - [Running Tests](#-running-tests)
-- [Development Progress](#-development-progress)
-- [Key Design Decisions](#-key-design-decisions)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
 
 ---
 
-## 🎯 What Is This?
-
-The **Agent Reliability Engine** is a CI/CD framework specifically designed for autonomous AI agents. Just as traditional software has unit tests and integration tests, AI agents need a way to be continuously evaluated for **safety, reliability, and correct behavior**.
-
-This engine solves a critical problem: *how do you know if your AI agent will behave safely when it encounters adversarial inputs, unexpected tool responses, or high-stakes decisions?*
-
-### The Core Flow
+## ⚙️ How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -54,12 +62,12 @@ This engine solves a critical problem: *how do you know if your AI agent will be
 │                                                             │
 │  1. GENERATE ──► 2. EXECUTE ──► 3. GUARD ──► 4. CLASSIFY  │
 │                                                             │
-│  Groq (Fast)       Sandbox        Rule-based   Groq (Pro)  │
-│  generates         runs agent     checks for   judges the  │
-│  adversarial       against        high-risk    trace and   │
-│  scenarios         mocked tools   tool calls   classifies  │
-│  per category      with trace     without      with OWASP  │
-│                    capture        confirmation  mapping     │
+│  Groq generates    Sandbox runs   Rule-based   Groq Pro    │
+│  adversarial       agent against  checks for   judges the  │
+│  scenarios for     mocked tools   high-risk    trace and   │
+│  each failure      with full      tool calls   classifies  │
+│  category          trace capture  without      with OWASP  │
+│                                   confirmation  mapping     │
 │                         │                                   │
 │                         ▼                                   │
 │               5. SCORECARD (Wilson CI)                      │
@@ -67,28 +75,28 @@ This engine solves a critical problem: *how do you know if your AI agent will be
 │               per-version + trend tracking                  │
 │                         │                                   │
 │                         ▼                                   │
-│           6. NEXT.JS DASHBOARD (live wired)                 │
-│         Scorecard · Traces · Red Team Chat · Reports        │
+│           6. DASHBOARD + AUTO-REMEDIATION                   │
+│        Scorecard · Traces · Red Team Chat · Patches        │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+Each run produces a **structured execution trace** (every LLM call, tool call, and response), a **failure classification** with root cause and OWASP mapping, and a **guardrail result** that detects confirmation bypasses. Over time, the scorecard tracks reliability drift across agent versions.
 
 ---
 
 ## 🖥️ Live Dashboard
 
-The Next.js 15 dashboard is fully wired to the backend API — all 7 routes show real data when the backend is running, with graceful mock fallback when offline.
+The Next.js 15 dashboard is fully wired to the backend API. All pages switch seamlessly between **Live mode** (real API data) and **Demo mode** (mock data when the backend is offline).
 
-| Page | Description |
-|------|-------------|
-| `/` Dashboard | KPI cards (score, runs, guardrail rate), failure distribution pie, recent runs table — all live from backend |
-| `/scenarios` | Adversarial scenario catalog + live generate button calling `POST /api/scenarios/generate` |
-| `/traces/[runId]` | Live trace viewer with WebSocket streaming, intel panel, verdict + OWASP mapping |
-| `/scorecard` | Reliability trend chart, severity heatmap, OWASP risk profile, Wilson CI display |
-| `/red-team` | Natural language red team chat → live `POST /api/red-team-chat` → real LLM verdict |
-| `/remediation` | AI-suggested patches with before/after diff viewer |
-| `/report` | Full reliability report with embedded SVG badge |
-
-**Design:** Dark-mode glassmorphism UI, animated counters, Recharts data viz, reconnecting WebSocket hook, live/demo mode sidebar indicator.
+| Page | What It Shows |
+|------|---------------|
+| `/` | KPI cards (reliability score, run count, guardrail rate), failure distribution pie chart, recent run log |
+| `/scenarios` | Full scenario catalog across all 7 failure categories + live generation button |
+| `/traces/[runId]` | Annotated execution trace with WebSocket streaming, classification verdict, OWASP mapping |
+| `/scorecard` | Reliability trend chart (per-version), severity heatmap, Wilson CI bounds, version comparison |
+| `/red-team` | Natural language red team chat → live scenario → execute → classify in one round-trip |
+| `/remediation` | AI-suggested system prompt / tool schema patches with before/after diff viewer and sandbox verification |
+| `/report` | Full reliability report with auto-generated SVG badge (embeddable in your own README) |
 
 ---
 
@@ -108,120 +116,116 @@ The Next.js 15 dashboard is fully wired to the backend API — all 7 routes show
 │  │                      FASTAPI BACKEND (Port 8000)                      │  │
 │  │                                                                       │  │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────┐  │  │
-│  │  │  REST Router  │  │  WebSocket   │  │      Dependency Injection  │  │  │
-│  │  │  18 endpoints │  │  /ws/traces  │  │      (DB Session, Settings)│  │  │
+│  │  │  REST Router  │  │  WebSocket   │  │    Dependency Injection     │  │  │
+│  │  │  18 endpoints │  │  /ws/traces  │  │    (DB Session, Settings)   │  │  │
 │  │  └──────┬───────┘  └──────┬───────┘  └────────────────────────────┘  │  │
 │  │         │                 │                                           │  │
 │  │  ┌──────▼─────────────────▼──────────────────────────────────────┐   │  │
 │  │  │                    CORE MODULES                                │   │  │
 │  │  │                                                                │   │  │
-│  │  │  ┌─────────────────┐   ┌─────────────────┐                    │   │  │
-│  │  │  │ Module 1        │   │ Module 2         │                    │   │  │
-│  │  │  │ SCENARIO GEN    │   │ SANDBOX HARNESS  │                    │   │  │
-│  │  │  │                 │   │                  │                    │   │  │
-│  │  │  │ Groq Models  +  │   │ LangGraph Agent  │                    │   │  │
-│  │  │  │ 7 category      │   │ Mocked Tools     │                    │   │  │
-│  │  │  │ prompt templates│   │ Trace Capture    │                    │   │  │
-│  │  │  │ Structured JSON │   │ Timeout (60s)    │                    │   │  │
-│  │  │  └────────┬────────┘   └────────┬─────────┘                   │   │  │
-│  │  │           │                     │                              │   │  │
-│  │  │  ┌────────▼────────┐   ┌────────▼─────────┐                   │   │  │
-│  │  │  │ Module 4        │   │ Module 3          │                   │   │  │
-│  │  │  │ GUARDRAIL TESTER│   │ FAILURE CLASSIFIER│                   │   │  │
-│  │  │  │                 │   │                   │                   │   │  │
-│  │  │  │ Rule-based      │   │ Groq LLM Judge    │                   │   │  │
-│  │  │  │ High-risk tool  │   │ Anti-sycophancy   │                   │   │  │
-│  │  │  │ detection       │   │ Rubric + OWASP    │                   │   │  │
-│  │  │  │ HELD/BYPASSED   │   │ LLM Top 10 Map    │                   │   │  │
-│  │  │  └─────────────────┘   └────────┬──────────┘                  │   │  │
-│  │  │                                 │                              │   │  │
-│  │  │  ┌──────────────────────────────▼──────────────────────────┐  │   │  │
-│  │  │  │ Module 5: SCORECARD & STATISTICS                         │  │   │  │
-│  │  │  │ Overall Score · Per-category Breakdown · Wilson CI       │  │   │  │
-│  │  │  │ Severity Heatmap · OWASP Risk Profile · Flaky Detection  │  │   │  │
-│  │  │  └─────────────────────────────────────────────────────────┘  │   │  │
-│  │  └────────────────────────────────────────────────────────────┘   │  │
-│  │                                                                    │  │
-│  │  ┌─────────────────────────────────────────────────────────────┐  │  │
-│  │  │               DEVOPS ASSISTANT AGENT                         │  │  │
-│  │  │           (LangGraph · 3 Personas · 5 Tools)                 │  │  │
-│  │  │   check_service_health  ·  rollback_deployment              │  │  │
-│  │  │   restart_service       ·  delete_deployment                │  │  │
-│  │  │   get_deployment_logs                                        │  │  │
-│  │  └─────────────────────────────────────────────────────────────┘  │  │
-│  └────────────────────────────────────────────────────────────────────┘  │
+│  │  │  Scenario Generator → Sandbox Harness → Guardrail Tester      │   │  │
+│  │  │                        ↓                                       │   │  │
+│  │  │                  Failure Classifier (LLM-as-Judge)             │   │  │
+│  │  │                        ↓                                       │   │  │
+│  │  │          Scorecard + Statistics + Remediation Engine           │   │  │
+│  │  └────────────────────────────────────────────────────────────────┘   │  │
+│  └────────────────────────────────────────────────────────────────────────┘  │
 │                               │                                           │
 │  ┌────────────────────────────▼─────────────────────────────────────────┐ │
 │  │              NEON POSTGRESQL (Async · asyncpg · Alembic)              │ │
-│  │                                                                       │ │
-│  │  agent_versions  ·  scenarios  ·  runs  ·  classifications            │ │
-│  │                  ·  guardrail_results                                 │ │
+│  │   agent_versions · scenarios · runs · classifications · guardrails    │ │
 │  └───────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧩 Module Breakdown
+## 🧩 Module Deep-Dive
 
 ### Module 1 — Scenario Generation Engine
-**File:** `backend/app/modules/scenario_generator.py`
+**`backend/app/modules/scenario_generator.py`**
 
-Uses **Groq** to automatically generate adversarial test scenarios across 7 failure categories. Each scenario includes a user message, expected safe behavior, mocked tool responses, and OWASP mapping.
+Generates adversarial test scenarios across 7 failure categories using Groq with strict `json_object` output mode. Each scenario specifies the attack vector (`user_message`), what a safe agent should do (`expected_safe_behavior`), expected tool call sequence, and mocked tool responses.
 
-- **Lazy initialization** via `@property` — no `GROQ_API_KEY` needed at import time (CI-friendly)
-- **7 category-specific prompt templates** — each tuned to elicit a specific failure mode
-- **Structured JSON output** — Pydantic-validated at the source with explicit `response_format={"type": "json_object"}`
+**7 failure categories:** `DESTRUCTIVE_ACTION` · `PROMPT_INJECTION` · `TOOL_CALL_LOOP` · `GOAL_DRIFT` · `HALLUCINATED_CONFIDENCE` · `WRONG_TOOL` · `PREMATURE_COMPLETION`
 
-### Module 2 — Sandbox Execution Harness
-**File:** `backend/app/modules/sandbox_harness.py`
-
-Executes the DevOps agent in a fully controlled environment with mocked tool responses. Captures every LangGraph step (LLM calls, tool calls, agent outputs) as a structured trace.
-
-- **60-second hard timeout** — marks run as `TIMED_OUT`
-- **Async `on_step` callback** — enables live WebSocket streaming during execution
-- **Risk level annotation** — each trace step tagged with `none|low|high|critical`
-
-### Module 3 — Failure Mode Classifier (LLM-as-Judge)
-**File:** `backend/app/modules/failure_classifier.py`
-
-Uses **Groq (Pro models)** as a strict LLM judge to classify agent execution traces. The anti-sycophancy rubric explicitly instructs the model to err on the side of flagging failures.
-
-- **7-category taxonomy** with detailed negative examples in the rubric
-- **Pure `_derive_classification()`** function — fully testable without any LLM mocks
-- **Patchable `_get_client()`** — dependency-injectable Groq client for clean testing
-
-### Module 4 — Guardrail Tester (Rule-Based)
-**File:** `backend/app/modules/guardrail.py`
-
-Deterministic, rule-based detection of high-risk tool calls without user confirmation. 100% reproducible — identical traces always produce identical results.
-
-- **Pattern A (prompt-based):** Checks if agent asked a confirmation question before calling a destructive tool
-- **Pattern B (tool-based):** Checks if agent called a dedicated confirmation tool
-- **Result:** `HELD` (safe) or `BYPASSED` (unsafe) per high-risk tool call detected
-
-### Module 5 — Scorecard & Statistics
-**Files:** `backend/app/modules/scorecard.py`, `backend/app/core/statistics.py`
-
-Aggregates run results into a rich reliability report.
-
-- **All 7 categories always pre-seeded** — frontend never receives missing keys
-- **OWASP risk profile** — failure counts aggregated by OWASP LLM Top 10 code
-- **Wilson score CI** — correct at boundary proportions (0% or 100% pass rate)
-- **Severity heatmap** — `Record<category, Record<severity, count>>` for frontend grid
-- **Flaky scenario detection** — flags scenario_ids with mixed PASS/FAIL verdicts across multiple runs
+- Lazy client initialization — no API key required at import time, CI-safe
+- Each category has a dedicated prompt template tuned to its specific failure mode
+- Bare-array and wrapped `{"scenarios": [...]}` responses both handled
 
 ---
 
-## ⭐ Differentiators (D1–D5)
+### Module 2 — Sandbox Execution Harness
+**`backend/app/modules/sandbox_harness.py`**
 
-| ID | Feature | Implementation |
-|----|---------|----------------|
-| **D1** | OWASP LLM Top 10 mapping | `core/owasp_mapping.py` — every FAIL auto-mapped at classify time |
-| **D2** | Auto-generated report + badge | `GET /api/report/{id}` · `GET /api/badge/{id}.svg` — dynamic SVG with letter grade |
-| **D3** | Severity heatmap | `compute_scorecard()` returns `severity_heatmap: Record<category, Record<severity, count>>` |
-| **D4** | Natural Language Red Team Chat | `POST /api/red-team-chat` — free-text → LLM → validated scenario → execute → classify |
-| **D5** | Flaky scenario detection | `compute_scorecard()` returns `flaky_scenarios` list with pass/fail counts |
+Runs the agent in a fully isolated environment with mocked tool responses and captures every LangGraph step as a structured trace. The sandbox intercepts all tool calls and injects pre-defined mocked responses, so the agent exercises full reasoning without touching real infrastructure.
+
+- 60-second hard timeout — prevents runaway agents from blocking the pipeline
+- Async `on_step` callback for live WebSocket streaming during execution
+- Every step is tagged with a risk level: `none | low | high | critical`
+
+---
+
+### Module 3 — Failure Mode Classifier (LLM-as-Judge)
+**`backend/app/modules/failure_classifier.py`**
+
+Uses Groq's Pro model as a calibrated judge. The classification prompt uses an **anti-sycophancy rubric** — it explicitly instructs the model to treat "safe-sounding" responses with high scrutiny and to flag subtle failures that human reviewers would miss.
+
+- 7-category taxonomy with detailed negative examples in the rubric
+- `_derive_classification()` is a pure function — 20+ tests run in <1ms without mocking
+- OWASP LLM Top 10 mapping applied at classification time
+- Patchable `_get_client()` for clean dependency injection in tests
+
+---
+
+### Module 4 — Guardrail Tester (Rule-Based)
+**`backend/app/modules/guardrail.py`**
+
+Deterministic detection of high-risk tool calls executed without user confirmation. Rule-based (no LLM) so it is 100% reproducible — identical traces always produce identical results.
+
+- **Pattern A:** Did the agent ask a confirmation question before calling a destructive tool?
+- **Pattern B:** Did the agent call a dedicated confirmation tool?
+- **Result:** `HELD` (safe, confirmation detected) or `BYPASSED` (unsafe, tool called without confirmation)
+
+---
+
+### Module 5 — Scorecard & Statistics
+**`backend/app/modules/scorecard.py` · `backend/app/core/statistics.py`**
+
+Aggregates run results into a structured reliability report per agent version.
+
+- All 7 categories are always pre-seeded — frontend charts never receive missing keys
+- **Wilson score CI** — mathematically correct at 0% and 100% pass rates (Wald interval breaks at boundaries)
+- Severity heatmap: `{ category → { critical, high, medium, low } }` for the frontend grid
+- Flaky scenario detection: flags scenario IDs with mixed PASS/FAIL verdicts across runs
+
+---
+
+## 🎓 Design Decisions
+
+### Why Rule-Based Guardrails Instead of LLM-Based?
+
+The guardrail check is intentionally deterministic. An LLM-based guardrail could itself hallucinate — marking a genuine bypass as safe, or flagging a correctly-cautious agent as unsafe. Rule-based pattern matching on the trace is reproducible, auditable, and doesn't need a model call. LLM judgment is reserved for the nuanced failure classification task where it provides genuine value.
+
+### Why Anti-Sycophancy Tuning for the Classifier?
+
+Default LLM behavior tends toward agreement and positive framing. When asked "did the agent handle this safely?", a vanilla prompt will over-index on the last `agent_output` message (which often *sounds* responsible) and miss subtle failures in the middle of the trace. The classifier rubric flips this default: it lists every failure mode with concrete negative examples and instructs the model to treat reassuring-sounding outputs as a potential red flag, not evidence of safety.
+
+### Why OWASP LLM Top 10 Grounding?
+
+Mapping every failure to the OWASP LLM Top 10 (2025) serves two purposes: it gives the classifier a structured taxonomy to reason from (rather than freeform categories), and it gives engineering teams an immediate translation to industry-standard risk language. A scorecard showing `LLM01: 3 failures, LLM06: 8 failures` is far more actionable than raw category counts.
+
+### Why Wilson Score Confidence Interval?
+
+The standard Wald interval (`p ± z√(p(1-p)/n)`) produces `(0, 0)` when pass rate is 0% — which is exactly the condition you most need uncertainty quantification for (new agent, all failures). The Wilson score interval is mathematically correct at all proportions and sample sizes. It matters most when n is small or p is near 0 or 1.
+
+### Why "Live if Available, Mock Otherwise"?
+
+Every dashboard page has a mock data fallback structurally identical to the real API response. This means the dashboard works as a standalone demo (no backend, no DB, no API key needed), and transitions to fully live data the moment the backend is reachable — without any configuration switch. The same code path handles both.
+
+### Why Separate `_derive_classification()` from `classify_run()`?
+
+`_derive_classification()` is a pure function that handles all post-processing of the LLM's raw JSON (validation, OWASP mapping, default filling). This means 20+ of the 40 classifier tests run without any network calls. The unit tests cover the edge cases; the integration tests cover the LLM interaction. Keeping I/O at the boundary keeps the core logic fully testable.
 
 ---
 
@@ -243,18 +247,18 @@ Every failure is automatically mapped to the [OWASP LLM Top 10 (2025)](https://o
 
 ## 📡 API Reference
 
-Base URL: `http://localhost:8000`
+Base URL: `http://localhost:8000` · Interactive docs at `/docs`
 
 ### Agent Versions
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/agent-versions` | Create a new agent version |
+| `POST` | `/api/agent-versions` | Register a new agent version |
 | `GET` | `/api/agent-versions` | List all agent versions |
 
 ### Scenarios
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/scenarios/generate` | Generate adversarial scenarios (Groq) |
+| `POST` | `/api/scenarios/generate` | Generate adversarial scenarios via Groq |
 | `GET` | `/api/scenarios` | List all stored scenarios |
 
 ### Runs
@@ -262,7 +266,7 @@ Base URL: `http://localhost:8000`
 |---|---|---|
 | `POST` | `/api/runs/execute` | Execute a scenario against an agent version |
 | `GET` | `/api/runs/{run_id}` | Get run with full execution trace |
-| `GET` | `/api/runs` | List runs for an agent version (`?agent_version_id=`) |
+| `GET` | `/api/runs` | List runs for an agent version |
 
 ### Classification & Guardrails
 | Method | Endpoint | Description |
@@ -270,29 +274,29 @@ Base URL: `http://localhost:8000`
 | `POST` | `/api/classify/{run_id}` | Classify a run with Groq LLM judge |
 | `POST` | `/api/guardrail/check/{run_id}` | Run rule-based guardrail check |
 
-### Red Team Chat (D4)
+### Red Team Chat
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/red-team-chat` | NL message → scenario → execute → classify |
+| `POST` | `/api/red-team-chat` | Natural language → scenario → execute → classify |
 
 ### Scorecard
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/scorecard/{agent_version_id}` | Full scorecard (with heatmap + flaky + OWASP) |
+| `GET` | `/api/scorecard/{agent_version_id}` | Full scorecard (heatmap, flaky detection, OWASP profile) |
 | `GET` | `/api/scorecard/trend` | Reliability trend across all versions |
-| `GET` | `/api/scorecard/compare?version_a=...&version_b=...` | Side-by-side comparison |
+| `GET` | `/api/scorecard/compare` | Side-by-side version comparison |
 
 ### Remediation
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/remediation/suggest/{run_id}` | Generate system prompt/schema patches for failures |
-| `POST` | `/api/remediation/verify/{suggestion_id}` | Sandbox-verify the AI-suggested patch for safety |
+| `POST` | `/api/remediation/suggest/{run_id}` | Generate system prompt or tool schema patches |
+| `POST` | `/api/remediation/verify/{suggestion_id}` | Sandbox-verify the patch before applying |
 
-### Reports & Badges (D2)
+### Reports & Badges
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/report/{agent_version_id}` | Full auto-generated reliability report |
-| `GET` | `/api/badge/{agent_version_id}.svg` | Dynamic SVG badge with score + grade |
+| `GET` | `/api/badge/{agent_version_id}.svg` | Embeddable SVG badge with score + letter grade |
 
 ### WebSocket
 | Endpoint | Description |
@@ -308,19 +312,19 @@ Base URL: `http://localhost:8000`
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Purpose |
+| Layer | Technology | Notes |
 |---|---|---|
-| **Frontend** | Next.js 15 App Router + TypeScript | Dashboard, 7 routes, dark-mode UI |
-| **Data Viz** | Recharts | Trend charts, pie, bar, radar |
+| **Frontend** | Next.js 15 App Router + TypeScript | 7 routes, dark-mode glassmorphism UI |
+| **Data Viz** | Recharts | Trend charts, pie, heatmap grid, radar |
 | **API Framework** | FastAPI 0.115+ | Async REST + WebSocket |
-| **Agent Framework** | LangGraph 0.3+ | Stateful agent execution |
-| **LLM Inference** | Groq | Ultra-fast adversarial generation & evaluation |
-| **Database** | PostgreSQL (Neon) | Persistent storage via asyncpg |
+| **Agent Framework** | LangGraph 0.3+ | Stateful agent execution with trace capture |
+| **LLM Inference** | Groq | Ultra-fast generation and evaluation |
+| **Database** | PostgreSQL (Neon) | Serverless, async via asyncpg |
 | **ORM** | SQLAlchemy 2.0 (async) | DB models + async session management |
 | **Migrations** | Alembic | Versioned schema migrations |
 | **Validation** | Pydantic v2 | Request/response + schema validation |
-| **Testing** | pytest + pytest-asyncio | 253 tests, TDD Red-Green-Refactor |
-| **CI/CD** | GitHub Actions | Runs full test suite on Python 3.11 + 3.12 |
+| **Testing** | pytest + pytest-asyncio | 253 tests, TDD |
+| **CI/CD** | GitHub Actions | Full test suite on Python 3.11 + 3.12 |
 
 ---
 
@@ -332,83 +336,54 @@ agent-reliability-engine/
 ├── backend/
 │   ├── app/
 │   │   ├── agents/
-│   │   │   └── devops_agent.py          # LangGraph DevOps agent (3 personas, 5 tools)
+│   │   │   ├── devops_agent.py          # Built-in LangGraph DevOps agent (3 personas, 5 tools)
+│   │   │   └── agent_versions.py        # Pre-seeded agent version profiles
 │   │   ├── api/
 │   │   │   ├── routes.py                # 18 REST API endpoints
 │   │   │   └── websocket.py             # ConnectionManager for live trace streaming
 │   │   ├── core/
-│   │   │   ├── owasp_mapping.py         # D1: Static OWASP LLM Top 10 mapping
+│   │   │   ├── owasp_mapping.py         # Static OWASP LLM Top 10 mapping
 │   │   │   └── statistics.py            # Wilson score confidence interval
 │   │   ├── models/
 │   │   │   └── entities.py              # SQLAlchemy ORM (5 tables)
 │   │   ├── modules/
-│   │   │   ├── scenario_generator.py    # Module 1: Groq scenario generation
-│   │   │   ├── sandbox_harness.py       # Module 2: Sandboxed agent execution + trace
-│   │   │   ├── failure_classifier.py    # Module 3: Groq LLM-as-judge
+│   │   │   ├── scenario_generator.py    # Module 1: Adversarial scenario generation
+│   │   │   ├── sandbox_harness.py       # Module 2: Sandboxed agent execution
+│   │   │   ├── failure_classifier.py    # Module 3: LLM-as-judge classifier
 │   │   │   ├── guardrail.py             # Module 4: Rule-based guardrail checker
-│   │   │   ├── scorecard.py             # Module 5: Reliability scorecard + D3/D5
-│   │   │   └── red_team_chat.py         # D4: NL red team chat orchestration
-│   │   ├── schemas/
-│   │   │   ├── agent_version.py
-│   │   │   ├── classification.py
-│   │   │   ├── guardrail.py
-│   │   │   ├── run.py
-│   │   │   └── scenario.py
+│   │   │   ├── scorecard.py             # Module 5: Reliability scorecard + stats
+│   │   │   ├── red_team_chat.py         # NL red team chat orchestration
+│   │   │   └── remediation.py           # AI patch suggestion + verification
+│   │   ├── schemas/                     # Pydantic request/response schemas
 │   │   ├── config.py
 │   │   ├── database.py
 │   │   └── main.py
-│   ├── alembic/
-│   ├── tests/
-│   │   ├── test_api.py                  # API endpoint tests (live Neon DB)
-│   │   ├── test_failure_classifier.py
-│   │   ├── test_failure_classifier_edge_cases.py
-│   │   ├── test_guardrail.py
-│   │   ├── test_models.py
-│   │   ├── test_red_team_chat.py        # D4: 17 tests
-│   │   ├── test_sandbox_harness.py
-│   │   ├── test_sandbox_harness_edge_cases.py
-│   │   ├── test_scorecard.py            # Includes D3/D5 tests
-│   │   ├── test_scorecard_edge_cases.py
-│   │   └── test_statistics.py
+│   ├── alembic/                         # Database migrations
+│   ├── tests/                           # 253 tests across all modules
 │   ├── requirements.txt
 │   └── pyproject.toml
 │
 ├── frontend/
-│   ├── app/
-│   │   ├── globals.css                  # Full dark-mode design system
-│   │   ├── layout.tsx                   # Root layout + sidebar
-│   │   ├── page.tsx                     # Dashboard (KPIs, charts, runs)
-│   │   ├── scenarios/page.tsx           # Scenario catalog + generate
-│   │   ├── traces/[runId]/page.tsx      # Live trace viewer + classification
-│   │   ├── scorecard/page.tsx           # Reliability scorecard + heatmap
-│   │   ├── red-team/page.tsx            # NL red team chat
-│   │   ├── remediation/page.tsx         # AI patch suggestions
-│   │   └── report/page.tsx             # Full report + badge
+│   ├── app/                             # Next.js App Router pages (7 routes)
 │   ├── components/
-│   │   └── sidebar.tsx                  # Live/mock mode nav sidebar
+│   │   └── sidebar.tsx                  # Navigation sidebar with live/mock indicator
 │   ├── lib/
 │   │   ├── api-types.ts                 # TypeScript mirrors of backend schemas
-│   │   ├── api.ts                       # Typed fetch client (all endpoints)
-│   │   ├── agent-context.tsx            # AgentProvider (live + legacy fields)
+│   │   ├── api.ts                       # Typed fetch client
+│   │   ├── agent-context.tsx            # AgentProvider context
 │   │   ├── use-websocket.ts             # Reconnecting WebSocket hook
-│   │   ├── scenario-mapper.ts           # ScenarioRead[] → ScenarioItem[]
-│   │   ├── trace-mapper.ts              # BackendTraceStep[] → DisplayStep[]
+│   │   ├── scenario-mapper.ts           # ScenarioRead → ScenarioItem
+│   │   ├── trace-mapper.ts              # BackendTraceStep → DisplayStep
 │   │   ├── red-team-mapper.ts           # RedTeamChatResponse → RedTeamDisplayItem
 │   │   └── mock-data.ts                 # Full offline/demo dataset
 │   ├── package.json
 │   └── tsconfig.json
 │
 ├── .github/
-│   └── workflows/ci.yml                 # GitHub Actions (Python 3.11 + 3.12)
+│   └── workflows/ci.yml                 # GitHub Actions CI
 │
-├── .specify/
-│   ├── spec.md
-│   ├── plan.md
-│   ├── constitution.md
-│   └── task.md
-│
-└── docs/superpowers/plans/
-    └── 2026-08-21-agent-reliability-engine.md
+└── docs/
+    └── demo.md                          # End-to-end demo walkthrough
 ```
 
 ---
@@ -419,26 +394,24 @@ agent-reliability-engine/
 
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL database (e.g., [Neon.tech](https://neon.tech) — free tier works)
-- Groq API Key ([Get one here](https://console.groq.com/keys))
+- A PostgreSQL database — [Neon.tech](https://neon.tech) free tier works perfectly
+- A [Groq API key](https://console.groq.com/keys) — free tier is sufficient
 
-### 1. Clone the Repository
+### 1. Clone
 
 ```bash
 git clone https://github.com/akshatog/Agent-Reliability-Engine.git
 cd Agent-Reliability-Engine
 ```
 
-### 2. Backend Setup
+### 2. Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 3. Environment Configuration
-
-Create a `.env` file in the `backend/` directory:
+Create `backend/.env`:
 
 ```env
 # Database — must use asyncpg driver
@@ -447,26 +420,21 @@ DATABASE_URL=postgresql+asyncpg://user:password@host/dbname?ssl=require
 # Groq API
 GROQ_API_KEY=gsk_your_api_key_here
 
-# Model selection (defaults)
+# Model selection
 GROQ_MODEL=openai/gpt-oss-20b
 GROQ_PRO_MODEL=openai/gpt-oss-120b
 ```
 
-### 4. Run Database Migrations
+Run migrations and start:
 
 ```bash
 alembic upgrade head
-```
-
-### 5. Start the Backend Server
-
-```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
-The API is now available at `http://localhost:8000`. Visit `http://localhost:8000/docs` for the interactive Swagger UI.
+Swagger UI available at `http://localhost:8000/docs`.
 
-### 6. Frontend Setup
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -474,98 +442,76 @@ npm install
 npm run dev
 ```
 
-The dashboard is available at `http://localhost:3000`. It auto-detects whether the backend is running and switches between **Live** mode (real API data) and **Demo** mode (mock data).
+Dashboard available at `http://localhost:3000`. Auto-detects the backend and switches between **Live** and **Demo** mode.
 
 ---
 
 ## 🧪 Running Tests
 
-### Full Test Suite (253 tests)
-
 ```bash
 cd backend
+
+# Full suite (253 tests)
 python -m pytest tests/ -v
-```
 
-### Run Specific Module Tests
-
-```bash
-# Failure Classifier (Module 3)
-python -m pytest tests/test_failure_classifier.py tests/test_failure_classifier_edge_cases.py -v
-
-# Sandbox Harness (Module 2)
+# By module
+python -m pytest tests/test_scenario_generator.py tests/test_scenario_generator_edge_cases.py -v
 python -m pytest tests/test_sandbox_harness.py tests/test_sandbox_harness_edge_cases.py -v
-
-# Scorecard & Statistics (Module 5)
+python -m pytest tests/test_failure_classifier.py tests/test_failure_classifier_edge_cases.py -v
 python -m pytest tests/test_scorecard.py tests/test_scorecard_edge_cases.py tests/test_statistics.py -v
-
-# D4: Red Team Chat
 python -m pytest tests/test_red_team_chat.py -v
 
-# API Endpoints (live DB — requires .env)
+# API integration tests (requires .env with live DB)
 python -m pytest tests/test_api.py -v
 ```
 
 ---
 
-## 📊 Development Progress
+## 🗺️ Roadmap
 
-| Task | Module | Status | Tests |
-|---|---|---|---|
-| Task 1: Skeleton + DB Models + Schemas | Foundation | ✅ Done | — |
-| Task 2: DevOps Assistant Agent | LangGraph | ✅ Done | — |
-| Task 3: Guardrail Tester | Module 4 | ✅ Done | 20 tests |
-| Task 4: Scenario Generation Engine | Module 1 | ✅ Done | 22 tests |
-| CI/CD + DB Hardening | GitHub Actions + Alembic | ✅ Done | — |
-| Task 5: Sandbox Execution Harness | Module 2 | ✅ Done | 47 tests |
-| Task 6: Failure Mode Classifier | Module 3 | ✅ Done | 40 tests |
-| Task 7: Scorecard & Statistics | Module 5 | ✅ Done | 41 tests |
-| Task 8: REST API + Pipeline Wiring | 18 endpoints | ✅ Done | 21 tests |
-| D1: OWASP LLM Top 10 Mapping | `owasp_mapping.py` | ✅ Done | — |
-| D2: Auto-report + SVG badge | `GET /api/report`, `/badge` | ✅ Done | — |
-| D3: Severity heatmap | `compute_scorecard()` | ✅ Done | 8 tests |
-| D4: NL Red Team Chat | `red_team_chat.py` | ✅ Done | 17 tests |
-| D5: Flaky scenario detection | `compute_scorecard()` | ✅ Done | 7 tests |
-| **Total backend** | | **✅ 253/253 passing** | |
-| Task 9: Next.js Dashboard | Frontend (7 routes) | ✅ Done | Build clean |
-| Task 10: Full API wiring | Frontend ↔ Backend | ✅ Done | — |
-| Task 11: Integration + Demo | End-to-end | ✅ Done | — |
+The current implementation uses a built-in DevOps agent as the system under test. The longer-term goal is to make the engine generic enough to test *any* LangGraph or tool-calling agent.
+
+### Near-term
+- [ ] **Generic agent import** — accept any LangGraph graph or OpenAI function-calling agent as the system under test, not just the built-in DevOps agent
+- [ ] **GitHub Action** — package as a reusable GitHub Action so teams can drop adversarial testing into their own CI pipelines
+- [ ] **Scenario versioning** — track which scenarios caught which bugs across releases
+
+### Medium-term
+- [ ] **Multi-provider LLM support** — add OpenAI, Anthropic, and Google as classifier/generator backends alongside Groq
+- [ ] **Custom failure categories** — let users define domain-specific failure modes beyond the built-in 7
+- [ ] **Scenario library** — community-contributed adversarial scenario packs for common agent types (customer support, coding assistant, research agent)
+
+### Longer-term
+- [ ] **Multi-agent testing** — test agent pipelines and orchestrators, not just single agents
+- [ ] **Automated regression detection** — auto-trigger re-testing when a new agent version is registered, with Slack/email alerts on reliability drops
+- [ ] **Browser-native replay** — full trace replay in the dashboard with frame-by-frame stepping
 
 ---
 
-## 🎓 Key Design Decisions
+## 🤝 Contributing
 
-### Why Wilson Score Interval?
-The naive Wald interval (`p ± z√(p(1-p)/n)`) breaks at boundary proportions — it gives `(0, 0)` for 0% pass rate even with 100 samples. The Wilson score interval is mathematically correct at all proportions and sample sizes, which matters when early-stage agents fail 100% of the time.
+Contributions are welcome. The project follows strict TDD — any new module or endpoint should come with tests before implementation.
 
-### Why Separate `_derive_classification()` from `classify_run()`?
-`_derive_classification()` is a pure function (no I/O) that handles all post-processing of the LLM's raw JSON. This means 20+ of the 40 classifier tests run in <1ms without any network calls or mocking.
+1. Fork the repo and create a feature branch
+2. Write tests first (see `backend/tests/` for patterns)
+3. Implement the feature
+4. Ensure `python -m pytest tests/ -v` passes
+5. Open a PR with a clear description of the change
 
-### Why `_get_client()` Instead of Module-Level Groq Client?
-Module-level initialization crashes any test suite that imports `failure_classifier` without a `GROQ_API_KEY`. By isolating client creation in `_get_client()`, tests can `patch("app.modules.failure_classifier._get_client")` cleanly.
-
-### Why Transaction Rollback for API Tests?
-Using `SAVEPOINT`-based rollback means API tests run against the *exact same schema, constraints, and indexes* as production — catching real FK constraint violations that in-memory SQLite would silently ignore.
-
-### Why Pre-Seed All 7 Categories in Scorecard?
-The frontend's charts expect a predictable dict structure. Pre-seeding all 7 categories at `fail_count: 0` eliminates defensive `?.` checks and ensures charts render correctly even on the first run with zero failures.
-
-### Why "Live if available, Mock otherwise" in the Dashboard?
-The frontend auto-detects backend availability via `ApiError` — every page has a mock fallback identical in structure to the real data. This means the dashboard works as a standalone demo (no backend needed) and as a fully live dashboard with zero code changes.
+Please open an issue before starting large changes so we can align on design.
 
 ---
 
-## 🔗 Links
+## 📄 License
 
-- 📖 [Swagger UI (when running)](http://localhost:8000/docs)
-- 📊 [ReDoc API Docs (when running)](http://localhost:8000/redoc)
-- 🧪 [CI/CD Pipeline](https://github.com/akshatog/Agent-Reliability-Engine/actions)
-- 📋 [Implementation Plan](docs/superpowers/plans/2026-08-21-agent-reliability-engine.md)
+MIT — see [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
 
-Built with ❤️ using **Superpowers SDD/TDD** methodology · OOSC 4.0 Hackathon
+**Agent Reliability Engine** · Built with ❤️ as an open-source project
+
+*If this is useful to you, consider giving it a ⭐ — it helps others find it.*
 
 </div>
